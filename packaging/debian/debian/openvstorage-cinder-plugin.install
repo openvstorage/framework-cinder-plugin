@@ -1,1 +1,2 @@
 cinder-volume-driver                               opt/OpenvStorage/config
+cinder-unit-tests                                  opt/OpenvStorage/cinder-unit-tests
