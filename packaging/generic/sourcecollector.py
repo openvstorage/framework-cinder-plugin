@@ -20,7 +20,7 @@ import os
 import re
 import time
 from datetime import datetime
-from subprocess import check_output
+from subprocess import check_output, CalledProcessError
 from ConfigParser import RawConfigParser
 
 
@@ -160,9 +160,15 @@ class SourceCollector(object):
 
         # Load tag information
         tag_data = []
+        tags = []
         print '  Loading tags'
-        for raw_tag in SourceCollector.run(command='git show-ref --tags',
-                                           working_directory=repo_path_metadata).splitlines():
+        try:
+            tags = SourceCollector.run(command='git show-ref --tags',
+                                       working_directory=repo_path_metadata).splitlines()
+        except CalledProcessError:
+            print('  - no tags')
+            
+        for raw_tag in tags:
             parts = raw_tag.strip().split(' ')
             rev_hash = parts[0]
             tag = parts[1].replace('refs/tags/', '')
