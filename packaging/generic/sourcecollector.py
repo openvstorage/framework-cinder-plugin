@@ -167,7 +167,7 @@ class SourceCollector(object):
                                        working_directory=repo_path_metadata).splitlines()
         except CalledProcessError:
             print('  - no tags')
-            
+
         for raw_tag in tags:
             parts = raw_tag.strip().split(' ')
             rev_hash = parts[0]
