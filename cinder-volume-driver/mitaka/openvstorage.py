@@ -75,7 +75,7 @@ def _debug_vol_info(call, volume):
 
 class OVSVolumeDriver(driver.VolumeDriver):
     """Open vStorage Volume Driver plugin for Cinder."""
-    VERSION = '1.0.8'
+    VERSION = '1.1.0'
 
     def __init__(self, *args, **kwargs):
         """Init: args, kwargs pass through;
