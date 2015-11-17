@@ -1,0 +1,10 @@
+{
+    "package_name": "openvstorage-cinder-plugin",
+    "product_name": "Open vStorage Cinder Plugin",
+    "source_contents": "--transform 's,^,{0}-{1}/,' cinder-volume-driver cinder-unit-tests *.txt",
+    "version": {
+        "major": 1,
+        "minor": 1,
+        "patch": 0
+    }
+}
