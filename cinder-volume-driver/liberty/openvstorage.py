@@ -77,7 +77,7 @@ def _debug_vol_info(call, volume):
 
 class OVSVolumeDriver(driver.VolumeDriver):
     """Open vStorage Volume Driver plugin for Cinder"""
-    VERSION = '1.0.8'
+    VERSION = '1.0.9'
 
     def __init__(self, *args, **kwargs):
         """Init: args, kwargs pass through;
@@ -575,7 +575,7 @@ class OVSVolumeDriver(driver.VolumeDriver):
             snaps_guid = [s['guid'] for s in disk.snapshots]
             if str(snapshotid) in snaps_guid:
                 LOG.debug('[_FIND OVS DISK] Snapshot id %s Disk found %s',
-                          snapshotid, disk)
+                          snapshotid, disk.name)
                 return disk
         msg = (_('No disk found for snapshotid %s'), snapshotid)
         LOG.exception(msg)
