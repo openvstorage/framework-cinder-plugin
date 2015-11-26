@@ -100,7 +100,7 @@ class OVSVolumeDriver(driver.VolumeDriver):
         cinder type-create <TYPENAME> # e.g. Open vStorage
         cinder type-key <TYPENAME> set volume_backend_name=<VPOOLNAME>
     """
-    VERSION = '1.0.7'
+    VERSION = '1.0.8'
 
     def __init__(self, *args, **kwargs):
         """Init: args, kwargs pass through;
@@ -586,7 +586,7 @@ class OVSVolumeDriver(driver.VolumeDriver):
             snaps_guid = [s['guid'] for s in disk.snapshots]
             if str(snapshotid) in snaps_guid:
                 LOG.info('[_FIND OVS DISK] Snapshot id %s Disk found %s'
-                         % (snapshotid, disk))
+                         % (snapshotid, disk.name))
                 return disk
         raise RuntimeError('No disk found for snapshotid %s' % snapshotid)
 
