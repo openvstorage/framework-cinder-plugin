@@ -77,7 +77,7 @@ def _debug_vol_info(call, volume):
 
 class OVSVolumeDriver(driver.VolumeDriver):
     """Open vStorage Volume Driver plugin for Cinder"""
-    VERSION = '1.0.9'
+    VERSION = '1.0.10'
 
     def __init__(self, *args, **kwargs):
         """Init: args, kwargs pass through;
@@ -121,15 +121,15 @@ class OVSVolumeDriver(driver.VolumeDriver):
         size = volume.size
 
         LOG.debug('DO_CREATE_VOLUME %s %s', location, size)
-        vdisklib.VDiskController.create_volume(location = location,
-                                               size = size)
+        vdisklib.VDiskController.create_volume.apply_async(kwargs = {"location": location,
+                                                                     "size" : size}).get(timeout=1800)
         volume['provider_location'] = location
 
         try:
             ovs_disk = self._find_ovs_model_disk_by_location(location,
                                                              hostname)
         except exception.VolumeBackendAPIException:
-            vdisklib.VDiskController.delete_volume(location = location)
+            vdisklib.VDiskController.delete_volume.apply_async(kwargs = {"location": location}).get(timeout=1800)
             raise
 
         ovs_disk.cinder_id = volume.id
@@ -145,7 +145,7 @@ class OVSVolumeDriver(driver.VolumeDriver):
         location = volume.provider_location
         if location is not None:
             LOG.debug('DO_DELETE_VOLUME %s', location)
-            vdisklib.VDiskController.delete_volume(location = location)
+            vdisklib.VDiskController.delete_volume.apply_async(kwargs = {"location" : location}).get(timeout=1800)
 
     def copy_image_to_volume(self, context, volume, image_service, image_id):
         """Copy image to volume
@@ -166,7 +166,7 @@ class OVSVolumeDriver(driver.VolumeDriver):
         if destination_path:
             LOG.debug('CP_IMG_TO_VOL Deleting existing empty raw file %s ',
                       destination_path)
-            vdisklib.VDiskController.delete_volume(location = destination_path)
+            vdisklib.VDiskController.delete_volume.apply_async(kwargs = {"location" : destination_path}).get(timeout=1800)
             self._ensure_volume_is_gone(volume.provider_location, str(volume.host))
             LOG.debug('CP_IMG_TO_VOL Downloading image to %s',
                       destination_path)
@@ -227,13 +227,12 @@ class OVSVolumeDriver(driver.VolumeDriver):
             LOG.debug('[CREATE FROM TEMPLATE] ovs_disk %s ',
                       source_ovs_disk.devicename)
 
-            disk_meta = vdisklib.VDiskController.create_from_template(
-                diskguid = source_ovs_disk.guid,
-                machinename = "",
-                devicename = str(name),
-                pmachineguid = pmachineguid,
-                machineguid = None,
-                storagedriver_guid = None)
+            disk_meta = vdisklib.VDiskController.create_from_template.apply_async(kwargs = {"diskguid" : source_ovs_disk.guid,
+                                                                                            "machinename" : "",
+                                                                                            "devicename" : str(name),
+                                                                                            "pmachineguid" : pmachineguid,
+                                                                                            "machineguid" : None,
+                                                                                            "storagedriver_guid" : None}).get(timeout=1800)
             volume['provider_location'] = '{}{}'.format(
                 mountpoint, disk_meta['backingdevice'])
             LOG.debug('[CREATE FROM TEMPLATE] New volume %s',
@@ -261,10 +260,9 @@ class OVSVolumeDriver(driver.VolumeDriver):
                             'is_automatic': False}
 
                 LOG.debug('CREATE_SNAP %s %s', name, str(metadata))
-                snapshotid = vdisklib.VDiskController.create_snapshot(
-                    diskguid = source_ovs_disk.guid,
-                    metadata = metadata,
-                    snapshotid = None)
+                snapshotid = vdisklib.VDiskController.create_snapshot(kwargs = {"diskguid" : source_ovs_disk.guid,
+                                                                                "metadata" : metadata,
+                                                                                "snapshotid" : None}).get(timeout=1800)
                 LOG.debug('CREATE_SNAP OK')
 
                 OVSVolumeDriver._wait_for_snapshot(source_ovs_disk, snapshotid)
@@ -272,13 +270,12 @@ class OVSVolumeDriver(driver.VolumeDriver):
                 snapshotid = available_snapshots[-1]['guid']
             LOG.debug('[CREATE CLONE FROM SNAP] %s ', snapshotid)
 
-            disk_meta = vdisklib.VDiskController.clone(
-                diskguid = source_ovs_disk.guid,
-                snapshotid = snapshotid,
-                devicename = str(name),
-                pmachineguid = pmachineguid,
-                machinename = "",
-                machineguid=None)
+            disk_meta = vdisklib.VDiskController.clone.apply_async(kwargs = {"diskguid" : source_ovs_disk.guid,
+                                                                             "snapshotid" : snapshotid,
+                                                                             "devicename" : str(name),
+                                                                             "pmachineguid" : pmachineguid,
+                                                                             "machinename" : "",
+                                                                             "machineguid" :None}).get(timeout=1800)
             volume['provider_location'] = '{}{}'.format(
                 mountpoint, disk_meta['backingdevice'])
 
@@ -330,10 +327,9 @@ class OVSVolumeDriver(driver.VolumeDriver):
 
         LOG.debug('CREATE_SNAP %s %s', snapshot.display_name,
                   str(metadata))
-        vdisklib.VDiskController.create_snapshot(diskguid = ovs_disk.guid,
-                                                 metadata = metadata,
-                                                 snapshotid =
-                                                 str(snapshot.id))
+        vdisklib.VDiskController.create_snapshot.apply_async(kwargs = {"diskguid" : ovs_disk.guid,
+                                                                       "metadata" : metadata,
+                                                                       "snapshotid" : str(snapshot.id)}).get(timeout=1800)
         LOG.debug('CREATE_SNAP OK')
 
     def delete_snapshot(self, snapshot):
@@ -352,9 +348,8 @@ class OVSVolumeDriver(driver.VolumeDriver):
             LOG.exception(msg)
             raise exception.SnapshotIsBusy(snapshot_name = snapshot.id)
 
-        vdisklib.VDiskController.delete_snapshot(diskguid = ovs_disk.guid,
-                                                 snapshotid =
-                                                 str(snapshot.id))
+        vdisklib.VDiskController.delete_snapshot.apply_async(kwargs = {"diskguid" : ovs_disk.guid,
+                                                                       "snapshotid" : str(snapshot.id)}).get(timeout=1800)
 
         LOG.debug('DELETE_SNAP OK')
 
@@ -396,8 +391,7 @@ class OVSVolumeDriver(driver.VolumeDriver):
             LOG.debug('[CLONE FROM SNAP] Executing clone - async')
             # Execute "clone" task async, using celery workers
             # wait for the result for 30 minutes then raise TimeoutError
-            disk_meta = vdisklib.VDiskController.clone.apply_async(
-                kwargs = kwargs).get(timeout = 1800)
+            disk_meta = vdisklib.VDiskController.clone.apply_async(kwargs = kwargs).get(timeout = 1800)
             LOG.debug('[CLONE FROM SNAP] Executing clone - async - DONE')
             volume['provider_location'] = '{}{}'.format(
                 mountpoint, disk_meta['backingdevice'])
@@ -437,8 +431,8 @@ class OVSVolumeDriver(driver.VolumeDriver):
         location = volume.provider_location
         if location is not None:
             LOG.debug('DO_EXTEND_VOLUME %s', location)
-            vdisklib.VDiskController.extend_volume(location = location,
-                                                   size = size_gb)
+            vdisklib.VDiskController.extend_volume.apply_async(kwargs = {"location": location,
+                                                                         "size": size_gb}).get(timeout=1800)
 
     # Prevent NotImplementedError being raised
     # Not actually implemented, these actions do not make sense for this driver
