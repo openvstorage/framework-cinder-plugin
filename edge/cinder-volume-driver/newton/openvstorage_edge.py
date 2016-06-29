@@ -17,6 +17,8 @@ OpenStack Cinder driver - interface to Open vStorage Edge
 - uses qemu-img calls (requires libovsvolumedriver, qemu, libvirt-bin packages from openvstorage repo)
 - uses https api where needed
 """
+import os, ctypes, errno
+from ctypes import cdll, CDLL
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -24,7 +26,6 @@ import six
 
 from cinder import exception
 from cinder import utils
-from cinder.i18n import _, _LE
 from cinder.image import image_utils
 from cinder.volume import driver
 
@@ -43,6 +44,7 @@ OPTS = [cfg.StrOpt('storage_ip',
 CONF = cfg.CONF
 CONF.register_opts(OPTS)
 
+
 class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
     """Open vStorage Edge Volume Driver plugin for Cinder."""
     VERSION = '0.0.1'
@@ -58,31 +60,42 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         self.volume_backend_name = kwargs['host'].split('@')[1]
 
     def _get_volume_location(self, volume_name):
+        """Return volume location."""
         return 'openvstorage+{0}:{1}:{2}/{3}'.format(self.configuration.edge_protocol,
                                                      self.configuration.storage_ip,
                                                      self.configuration.edge_port,
                                                      volume_name)
 
-    def _run_qemu_img(self, command, volume_name, *params):
+    def _run_qemu_img(self, command, *params):
         """Executes qemu-img command wrapper."""
-        location = self._get_volume_location(volume_name)
-        cmd = ['env', 'LC_ALL=C', 'LANG=C', 'qemu-img', command, location] + list(params)
-        return utils.execute(*cmd)
-
+        cmd = ['env', 'LC_ALL=C', 'LANG=C', 'qemu-img', command] + list(params)
+        output = utils.execute(*cmd)
+        LOG.debug('Run: {0} Output: {1}'.format(cmd, output))
+        return output
 
     def check_for_setup_error(self):
+        """Check for setup errors"""
         pass
+
+    def do_setup(self, context):
+        """Any initialization the volume driver does while starting."""
+        cdll.LoadLibrary('libovsvolumedriver.so')
+        libovsvolumedriver = CDLL('libovsvolumedriver.so', use_errno=True)
+        ctx_attr = libovsvolumedriver.ovs_ctx_attr_new()
+        libovsvolumedriver.ovs_ctx_attr_set_transport(ctx_attr,
+                                                      self.configuration.edge_protocol,
+                                                      self.configuration.storage_ip,
+                                                      int(self.configuration.edge_port))
+        self.ctx = libovsvolumedriver.ovs_ctx_new(ctx_attr)
+        LOG.debug('libovsvolumedriver do_setup: {0} {1} {2} {3} > {4}'.format(ctx_attr, self.configuration.edge_protocol, self.configuration.storage_ip, self.configuration.edge_port, self.ctx))
+        self.libovsvolumedriver = libovsvolumedriver
 
     # Volume operations
     def initialize_connection(self, volume, connector):
-        """Allow connection to connector and return connection info.
-
-        Volume is a .raw file on a virtual filesystem.
-        No specific action required, connection is allowed based
-        on POSIX permissions
-        """
-
+        """Allow connection to connector and return connection info."""
+        _ = connector
         return {'driver_volume_type': 'openvstorage_edge',
+                'volume_backend_name': self.volume_backend_name,
                 'data': {'device_path': volume.provider_location}}
 
     def create_volume(self, volume):
@@ -91,11 +104,14 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         Called on "cinder create ..." or "nova volume-create ..."
         :param volume: volume reference (sqlalchemy Model)
         """
-        self._run_qemu_img('create', volume.display_name, '{0}G'.format(volume.size))
-
         location = self._get_volume_location(volume.display_name)
-        volume['provider_location'] = location
+        out = self.libovsvolumedriver.ovs_create_volume(self.ctx, str(volume.display_name), int(volume.size))
+        LOG.debug('libovsvolumedriver.ovs_create_volume: {0} {1} {2} > {3}'.format(self.ctx, volume.display_name, volume.size, out))
+        if out == -1:
+            raise OSError(errno.errorcode[ctypes.get_errno()])
 
+        volume['provider_location'] = location
+        self.extend_volume(volume, volume.size)
         return {'provider_location': volume['provider_location']}
 
     def delete_volume(self, volume):
@@ -104,23 +120,88 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         Called on "cinder delete ... "
         :param volume: volume reference (sqlalchemy Model)
         """
+        out = self.libovsvolumedriver.ovs_remove_volume(self.ctx, str(volume.display_name))
+        LOG.debug('libovsvolumedriver.ovs_create_volume: {0} {1} > {2}'.format(self.ctx, volume.size,out))
+        if out == -1:
+            errno = ctypes.get_errno()
+            if errno == 2:
+                return
+            raise OSError(errno.errorcode[errno])
+
+    def copy_image_to_volume(self, context, volume, image_service, image_id):
+        """Copy image to volume
+
+        Called on "nova volume-create --image-id ..."
+        or "cinder create --image-id"
+        Downloads image from glance server into volume
+        :param context: Context object
+        :param volume: volume reference (sqlalchemy Model)
+        :param image_service: image service reference
+        :param image_id: id of the image
+        """
+        self.extend_volume(volume, volume.size)
+
         location = self._get_volume_location(volume.display_name)
-        
+        image_path = os.path.join('/tmp', image_id)
+        if not os.path.exists(image_path):
+            image_utils.fetch_to_raw(context,
+                                     image_service,
+                                     image_id,
+                                     image_path,
+                                     '1M',
+                                     size=volume['size'])
+        self._run_qemu_img('convert', '-n', '-O', 'raw', image_path, location)
+
+    def extend_volume(self, volume, size_gb):
+        """Extend volume to new size size_gb."""
+        if size_gb < volume.size:
+            raise RuntimeError('Cannot shrink volume.')
+        out = self.libovsvolumedriver.ovs_truncate_volume(self.ctx, str(volume.display_name), int(volume.size))
+        if out == -1:
+            raise OSError(errno.errorcode[ctypes.get_errno()])
+
+    # Attach/detach volume to instance/host
+    def attach_volume(self, context, volume, instance_uuid, host_name,
+                      mountpoint):
+        """Callback for volume attached to instance or host."""
+        pass
+
+    def detach_volume(self, context, volume, attachment=None):
+        """Callback for volume detached."""
+        pass
 
     def get_volume_stats(self, refresh=False):
         """Get volumedriver stats
 
         Refresh not implemented
         """
-        data = {}
-        data['volume_backend_name'] = self.volume_backend_name
-        data['vendor_name'] = 'Open vStorage'
-        data['driver_version'] = self.VERSION
-        data['storage_protocol'] = 'openvstorage_edge'
-        data['total_capacity_gb'] = 'unknown'
-        data['free_capacity_gb'] = 'unknown'
-        data['reserved_percentage'] = 0
-        data['QoS_support'] = False
-        return data
+        _ = refresh
+        return {'volume_backend_name': self.volume_backend_name,
+                'vendor_name': 'Open vStorage',
+                'driver_version': self.VERSION,
+                'storage_protocol': 'openvstorage_edge',
+                'total_capacity_gb': 'unknown',
+                'free_capacity_gb': 'unknown',
+                'reserved_percentage': 0,
+                'QoS_support': False}
 
 
+    # Prevent NotImplementedError being raised
+    # Not actually implemented, these actions do not make sense for this driver
+    def create_export(self, context, volume, connector=None):
+        """Exports the volume."""
+        pass
+
+
+    def remove_export(self, context, volume):
+        """Removes an export for a volume."""
+        pass
+
+    def ensure_export(self, context, volume):
+        """Synchronously recreates an export for a volume."""
+        pass
+
+
+    def terminate_connection(self, volume, connector, force):
+        """Disallow connection from connector"""
+        pass
