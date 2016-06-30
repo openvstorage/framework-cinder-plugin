@@ -1,1 +1,1 @@
-PATH:
+PATH: /usr/local/lib/python2.7/dist-packages/os_brick/initiator/connector.py

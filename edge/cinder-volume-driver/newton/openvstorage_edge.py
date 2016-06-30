@@ -15,7 +15,7 @@
 """
 OpenStack Cinder driver - interface to Open vStorage Edge
 - uses qemu-img calls (requires libovsvolumedriver, qemu, libvirt-bin packages from openvstorage repo)
-- uses https api where needed
+- uses libovsvolumedriver calls where needed
 """
 import os, ctypes, errno
 from ctypes import cdll, CDLL
@@ -105,13 +105,14 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :param volume: volume reference (sqlalchemy Model)
         """
         location = self._get_volume_location(volume.display_name)
-        out = self.libovsvolumedriver.ovs_create_volume(self.ctx, str(volume.display_name), int(volume.size))
+        #out = self.libovsvolumedriver.ovs_create_volume(self.ctx, str(volume.display_name), int(volume.size*1024**3))
+        out = self._run_qemu_img('create', location, '{0}G'.format(volume.size))
         LOG.debug('libovsvolumedriver.ovs_create_volume: {0} {1} {2} > {3}'.format(self.ctx, volume.display_name, volume.size, out))
-        if out == -1:
-            raise OSError(errno.errorcode[ctypes.get_errno()])
+        #if out == -1:
+        #    raise OSError(errno.errorcode[ctypes.get_errno()])
 
         volume['provider_location'] = location
-        self.extend_volume(volume, volume.size)
+        #self.extend_volume(volume, volume.size)
         return {'provider_location': volume['provider_location']}
 
     def delete_volume(self, volume):
@@ -121,7 +122,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :param volume: volume reference (sqlalchemy Model)
         """
         out = self.libovsvolumedriver.ovs_remove_volume(self.ctx, str(volume.display_name))
-        LOG.debug('libovsvolumedriver.ovs_create_volume: {0} {1} > {2}'.format(self.ctx, volume.size,out))
+        LOG.debug('libovsvolumedriver.ovs_remove_volume: {0} {1} > {2}'.format(self.ctx, volume.display_name, out))
         if out == -1:
             errno = ctypes.get_errno()
             if errno == 2:
@@ -139,7 +140,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :param image_service: image service reference
         :param image_id: id of the image
         """
-        self.extend_volume(volume, volume.size)
+        #self.extend_volume(volume, volume.size)
 
         location = self._get_volume_location(volume.display_name)
         image_path = os.path.join('/tmp', image_id)
@@ -156,7 +157,8 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         """Extend volume to new size size_gb."""
         if size_gb < volume.size:
             raise RuntimeError('Cannot shrink volume.')
-        out = self.libovsvolumedriver.ovs_truncate_volume(self.ctx, str(volume.display_name), int(volume.size))
+        out = self.libovsvolumedriver.ovs_truncate_volume(self.ctx, str(volume.display_name), int(volume.size*1024**3))
+        LOG.debug('libovsvolumedriver.ovs_truncate_volume: {0} {1} {2} > {3}'.format(self.ctx, volume.display_name, volume.size, out))
         if out == -1:
             raise OSError(errno.errorcode[ctypes.get_errno()])
 
