@@ -105,7 +105,7 @@ class OpenvStorageEdgeBaseVD(driver.BaseVD):
         voldrv_path = OpenvStorageEdgeBaseVD.OVS_FILE_NAME.format(cleaned_vol_name)
 
         # Validate information
-        if cleaned_snap_name not in self._sd_client.list_snapshots(parent_volume_id):
+        if cleaned_snap_name not in snapshots:
             raise ValueError('Snapshot {0} does not belong to volume {1}'.format(snapshot.display_name, volume.display_name))
         # noinspection PyArgumentList
         if voldrv_path in self._sd_client.list_volumes_by_path():
