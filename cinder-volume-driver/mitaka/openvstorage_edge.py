@@ -130,9 +130,9 @@ class OpenvStorageEdgeBaseVD(driver.BaseVD):
         :return: None
         """
         volume_id = self._get_volume_id(volume=volume)
-        snapshots = self._sd_client.list_snapshots(volume_id)
-        if len(snapshots) > 0:
-            raise RuntimeError('Volume {0} still has snapshots'.format(volume_id))
+        for snapshot in self._sd_client.list_snapshots(volume_id):
+            logger.debug('Deleting snapshot {0} for volume {1}'.format(snapshot, volume_id))
+            self._sd_client.delete_snapshot(volume_id, snapshot)
 
         cleaned_name = OpenvStorageEdgeBaseVD._clean_display_name(name=volume.display_name)
         # noinspection PyArgumentList
@@ -262,7 +262,11 @@ class OpenvStorageEdgeBaseVD(driver.BaseVD):
         """
         Allow connection to connector and return connection info.
         """
-        return
+        cleaned_name = OpenvStorageEdgeBaseVD._clean_display_name(name=volume.display_name)
+        location = 'openvstorage+{0}:{1}:{2}/{3}'.format(self._protocol, self._ip, self._port, cleaned_name)
+        return {'data': {'device_path': location},
+                'driver_volume_type': 'openvstorage_edge',
+                'volume_backend_name': self.volume_backend_name}
 
     def create_export(self, context, volume, connector=None):
         """
@@ -274,7 +278,7 @@ class OpenvStorageEdgeBaseVD(driver.BaseVD):
         """
         Removes an export for a volume.
         """
-        return
+        pass
 
     def ensure_export(self, context, volume):
         """
@@ -286,7 +290,7 @@ class OpenvStorageEdgeBaseVD(driver.BaseVD):
         """
         Disallow connection from connector.
         """
-        return
+        pass
 
     def attach_volume(self, context, volume, instance_uuid, host_name, mountpoint):
         """
