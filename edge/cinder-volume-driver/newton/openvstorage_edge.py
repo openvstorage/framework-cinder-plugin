@@ -14,8 +14,8 @@
 
 """
 OpenStack Cinder driver - interface to Open vStorage Edge
-- uses qemu-img calls (requires libovsvolumedriver, qemu, libvirt-bin packages from openvstorage repo)
-- uses libovsvolumedriver calls where needed
+
+- uses qemu-img calls (requires qemu & libvirt-bin packages from openvstorage.com repo)
 """
 import os, ctypes, errno
 from ctypes import cdll, CDLL
@@ -32,14 +32,14 @@ from cinder.volume import driver
 
 LOG = logging.getLogger(__name__)
 OPTS = [cfg.StrOpt('storage_ip',
-                   default = '',
-                   help = 'IP address of first storage node'),
+                   default='',
+                   help='IP address of first storage node'),
         cfg.StrOpt('edge_port',
-                   default = '26203',
-                   help = 'PORT of the edge server'),
+                   default='26203',
+                   help='PORT of the edge server'),
         cfg.StrOpt('edge_protocol',
-                   default = 'tcp',
-                   help = 'Protocol to use - edge client')]
+                   default='tcp',
+                   help='Protocol to use - edge client')]
 
 CONF = cfg.CONF
 CONF.register_opts(OPTS)

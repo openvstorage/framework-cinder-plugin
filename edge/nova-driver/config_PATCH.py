@@ -1,6 +1,8 @@
-#https://github.com/openstack/nova/blob/master/nova/virt/libvirt/config.py
+# https://github.com/openstack/nova/blob/master/nova/virt/libvirt/config.py
 
-# line 900
+# line 904
+
+
 class LibvirtConfigOpenvStorageEdgeGuestDisk(LibvirtConfigGuestDisk):
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestDisk, self).__init__(root_name="disk", **kwargs)
@@ -40,16 +42,14 @@ class LibvirtConfigOpenvStorageEdgeGuestDisk(LibvirtConfigGuestDisk):
         source = etree.Element("source",
                                protocol=self.source_protocol,
                                snapshot_timeout=self.source_snapshot_timeout)
+        etree.SubElement(source, "host",
+                         name=self.source_host_name,
+                         port=self.source_host_port,
+                         transport=self.source_host_transport)
         if self.source_name is not None:
             source.set('name', self.source_name)
         dev.append(source)
-        host = etree.Element('host',
-                             name=self.source_host_name,
-                             port=self.source_host_port,
-                             transport=self.source_host_transport)
 
-
-        dev.append(host)
         dev.append(etree.Element("target",
                                  dev=self.target_dev,
                                  bus=self.target_bus))

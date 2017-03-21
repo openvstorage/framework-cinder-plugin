@@ -1,9 +1,9 @@
-#https://github.com/openstack/os-brick/blob/master/os_brick/initiator/connector.py
+# https://github.com/openstack/os_brick/blob/master/os_brick/initiator/connector.py
 
-#line 85
+# line 85
 OPENVSTORAGE_EDGE = "OPENVSTORAGE_EDGE"
 
-#line 93 ?? (missing in deployed version, present on master branch)
+# line 93
 """
 connector_list = [
         'os.brick.initiator.connector.OpenvStorageEdgeConnector',
@@ -11,7 +11,7 @@ connector_list = [
 
 """
 
-#line 277
+# line 277
 """
         elif protocol == OPENVSTORAGE_EDGE:
             return OpenvStorageEdgeConnector(root_helper=root_helper,
@@ -20,7 +20,9 @@ connector_list = [
                                              *args, **kwargs)
 """
 
-#line 491:
+# lib/python2.7/site-packages/os_brick/initiator/connectors/openvstorage.py
+
+
 class OpenvStorageEdgeConnector(InitiatorConnector):
     def __init__(self, root_helper, driver=None, execute=None,
                  device_scan_attempts=DEVICE_SCAN_ATTEMPTS_DEFAULT,
@@ -28,6 +30,7 @@ class OpenvStorageEdgeConnector(InitiatorConnector):
         super(OpenvStorageEdgeConnector, self).__init__(root_helper, execute=execute,
                                                        *args, **kwargs)
 
+    @staticmethod
     def get_connector_properties(root_helper, *args, **kwargs):
         """The generic connector properties."""
         return {}
