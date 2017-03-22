@@ -10,6 +10,8 @@ class LibvirtConfigOpenvStorageEdgeGuestDisk(LibvirtConfigGuestDisk):
         self.source_device = "disk"
         self.driver_name = 'qemu'
         self.driver_type = 'raw'
+        # https://specs.openstack.org/openstack/nova-specs/specs/juno/implemented/libvirt-disk-discard-option.html#proposed-change
+        self.driver_discard = 'ignore'
         self.source_protocol = "openvstorage"
         self.source_name = None
         self.source_snapshot_timeout = '120'
