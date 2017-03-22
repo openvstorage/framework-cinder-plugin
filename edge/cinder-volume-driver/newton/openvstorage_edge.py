@@ -160,6 +160,12 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
             errno = ctypes.get_errno()
             raise OSError(errno.errorcode[errno])
 
+    def create_cloned_volume(self, volume, src_vref):
+        """Creates a clone of the specified volume."""
+
+        volume_name = "volume-" + str(volume.id)
+        raise NotImplementedError("Cloning volume from volume is not yet implemented")
+
     def copy_image_to_volume(self, context, volume, image_service, image_id):
         """Copy image to volume
 
@@ -186,11 +192,12 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
     def extend_volume(self, volume, size_gb):
         """Extend volume to new size size_gb."""
         if size_gb < volume.size:
-            raise RuntimeError('Cannot shrink volume.')
+            raise RuntimeError('Cannot shrink volume: {0} > {1}'.format(volume.size, size_gb))
+
         volume_name = "volume-" + str(volume.id)
-        out = self.libovsvolumedriver.ovs_truncate_volume(self.ctx, str(volume_name), int(volume.size*1024**3))
-        LOG.debug('libovsvolumedriver.ovs_truncate_volume: {0} {1} {2} > {3}'.format(self.ctx, volume_name,
-                                                                                     volume.size, out))
+        out = self.libovsvolumedriver.ovs_truncate_volume(self.ctx, str(volume_name), ctypes.c_uint64(size_gb*1024**3))
+        LOG.debug('libovsvolumedriver.ovs_truncate_volume: {0} {1} {2} < {3}, {4}'.format(self.ctx, volume.id,
+                                                                                          volume.size, size_gb, out))
 
         if out == -1:
             raise OSError(errno.errorcode[ctypes.get_errno()])
