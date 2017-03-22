@@ -155,6 +155,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
                                                           str(snapshot['volume_name']),
                                                           str(snapshot['name']))
         LOG.debug('libovsvolumedriver.ovs_snapshot_remove: {0} {1} {2}'.format(self.ctx, str(snapshot), out))
+
         if out == -1:
             errno = ctypes.get_errno()
             raise OSError(errno.errorcode[errno])
@@ -188,11 +189,12 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
             raise RuntimeError('Cannot shrink volume.')
         volume_name = "volume-" + str(volume.id)
         out = self.libovsvolumedriver.ovs_truncate_volume(self.ctx, str(volume_name), int(volume.size*1024**3))
-        LOG.debug('libovsvolumedriver.ovs_truncate_volume: {0} {1} {2} > {3}'.format(self.ctx, volume_name, volume.size, out))
+        LOG.debug('libovsvolumedriver.ovs_truncate_volume: {0} {1} {2} > {3}'.format(self.ctx, volume_name,
+                                                                                     volume.size, out))
+
         if out == -1:
             raise OSError(errno.errorcode[ctypes.get_errno()])
 
-    # Attach/detach volume to instance/host
     def attach_volume(self, context, volume, instance_uuid, host_name,
                       mountpoint):
         """Callback for volume attached to instance or host."""
