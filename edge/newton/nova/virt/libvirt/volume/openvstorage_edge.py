@@ -42,8 +42,8 @@ class LibvirtOpenvStorageEdgeVolumeDriver(LibvirtVolumeDriver):
         conf = vconfig.LibvirtConfigOpenvStorageEdgeGuestDisk()
         conf.driver_name = libvirt_utils.pick_disk_driver_name(self.connection._host.get_version(),
                                                                self.is_block_dev)
-
         source_path = connection_info['data']['device_path']
+        LOG.debug("libovsvolumedriver.libvirt.get_config {0}".format(source_path))
         #u'device_path': u'openvstorage+tcp:10.130.11.202:26203/volimage3'
         ovs_proto, host, port_volume = source_path.split(':')
         port, name = port_volume.split('/')
