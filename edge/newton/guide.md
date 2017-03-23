@@ -4,7 +4,10 @@
 This setup is a easy way to setup OpenStack on 1 VM in LXE containers.
 This walkthrough is mainly focussing on OpenStack but in `Remarks` section, you can find all the directories for DevStack.
 
-Outside sources: 
+Before we begin, I want to mention that the directories that are present in this document can differ with the reality as every openstack distribution is different. 
+Nevertheless once you get a hold of it, the main directories do not differ that much.
+
+## Sources
 
 https://docs.openstack.org/developer/openstack-ansible/developer-docs/quickstart-aio.html
 
@@ -22,15 +25,31 @@ https://github.com/openvstorage/framework-cinder-plugin/tree/ovs-23-cinder-clean
 
 http://confluence.openvstorage.com/display/~kvanhijf/Install+OpenStack
 
-## Virtual machine details
+## Setups
+
+### OpenStack Virtual machine details
+* Hypervisor: 10.100.199.50
 * IP address: 10.100.198.200
+* Horizon: 10.100.198.200:80
 * Amount CPU's: 12
 * Amount RAM: 32GB
 * Amount disk 210GB (On NVMe)
+* Clean snapshot: `clean-snapshot-distupgrade`
+* Users:
+    * `root/rooter`
+    * `ovs-support/rooter`
 
-## Remarks
-
-Before we begin, I want to mention that the directories that are present in this document can differ with the reality as every openstack distribution is different. Nevertheless once you get a hold of it, the main directories do not differ that much.
+### DevStack Virtual machine details
+* Hypervisor: 10.100.199.50
+* IP address: 10.100.198.201
+* Horizon: 10.100.198.201:80
+* Amount CPU's: 12
+* Amount RAM: 32GB
+* Amount disk 210GB (On NVMe)
+* Clean snapshot: `clean`
+* Users:
+    * `root/rooter`
+    * `ovs-support/rooter`
 
 I used DevStack to debug some driver issues. I strongly suggest to use DevStack only for development and Ansible AIO for POCs.
 
@@ -56,6 +75,8 @@ Cinder driver brick connector: `/usr/local/lib/python2.7/dist-packages/os_brick/
 Nova driver location: `/opt/stack/nova/nova/virt/libvirt/volume/openvstorage_edge.py`
 
 Nova libvirt driver location: `/opt/stack/nova/nova/virt/libvirt/driver.py`
+
+Nova libvirt config location: `/opt/stack/nova/nova/virt/libvirt/config.py`
 
 ## What did I test?
 

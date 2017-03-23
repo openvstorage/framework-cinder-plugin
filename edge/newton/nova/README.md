@@ -1,8 +1,27 @@
-# https://github.com/openstack/nova/blob/master/nova/virt/libvirt/config.py
+# NOVA
 
-# line 904
+## Description
 
+The custom NOVA driver provides the ability to generate custom Open vStorage XML files for Libvirt.
 
+**IMPORTANT:** These files must be patched on machines where `nova-compute` is installed. Preferably under their own directories.
+
+## Driver
+
+The NOVA driver can be found under `virt/libvirt/volume` and should be installed under its respective directory.
+After installing the driver, you should restart `nova-compute`.
+
+## Patches
+
+### Config.py
+
+Here we've patched the `virt/libvirt/config.py` of nova. This makes it possible for us to deploy a XML with Open vStorage configuration.
+
+Source: `https://github.com/openstack/nova/blob/master/nova/virt/libvirt/config.py`
+
+line 904
+
+```
 class LibvirtConfigOpenvStorageEdgeGuestDisk(LibvirtConfigGuestDisk):
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestDisk, self).__init__(root_name="disk", **kwargs)
@@ -77,3 +96,19 @@ class LibvirtConfigOpenvStorageEdgeGuestDisk(LibvirtConfigGuestDisk):
             elif c.tag == 'target':
                 self.target_dev = c.get('dev')
                 self.target_bus = c.get('bus', None)
+```
+
+### Driver.py
+
+Here we've patched the `virt/libvirt/driver.py` of nova, this makes it possible to call the `LibvirtOpenvStorageEdgeVolumeDriver` volume module.
+This module calls `os_brick` to connect & disconnect volumes to instances.
+
+Source: `https://github.com/openstack/nova/blob/master/nova/virt/libvirt/driver.py`
+
+line 148
+
+```
+You should add a libvirt_volume_driver to the list called:
+
+openvstorage_edge=nova.virt.libvirt.volume.openvstorage_edge.LibvirtOpenvStorageEdgeVolumeDriver
+```

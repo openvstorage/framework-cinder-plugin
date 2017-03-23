@@ -16,7 +16,16 @@
 OpenStack Cinder driver - interface to Open vStorage Edge
 
 - uses qemu-img calls (requires qemu & libvirt-bin packages from openvstorage.com repo)
+
+sudo mkdir -p /opt/OpenvStorage/ci/api_lib/
+sudo git clone https://github.com/openvstorage/automation-lib.git /opt/OpenvStorage/ci/api_lib/
+cd /opt/OpenvStorage/ci/api_lib/
+sudo git checkout -b 0.1.5
+cd /opt/
+sudo find . -type d -exec touch {}/__init__.py \;
+chown -R ovs-support:ovs-support OpenvStorage/
 """
+import sys
 import os, ctypes, errno
 from ctypes import cdll, CDLL
 
@@ -33,16 +42,33 @@ from cinder.volume import driver
 LOG = logging.getLogger(__name__)
 OPTS = [cfg.StrOpt('storage_ip',
                    default='',
-                   help='IP address of first storage node'),
+                   help='IP address of the storagedriver'),
         cfg.StrOpt('edge_port',
                    default='26203',
-                   help='PORT of the edge server'),
+                   help='port of storagedriver'),
         cfg.StrOpt('edge_protocol',
                    default='tcp',
-                   help='Protocol to use - edge client')]
+                   help='Protocol to use by the edge client'),
+        cfg.StrOpt('storagerouter_ip',
+                   default='',
+                   help='IP address of the storagerouter the chosen storagedriver is running on'),
+        cfg.StrOpt('volume_backend_name',
+                   default='',
+                   help='Name of the used vPool'),
+        cfg.StrOpt('username',
+                   default='admin',
+                   help='Username of user used to access Open vStorage'),
+        cfg.StrOpt('password',
+                   default='admin',
+                   help='Password of user used to access Open vStorage')]
 
 CONF = cfg.CONF
 CONF.register_opts(OPTS)
+
+# Open vStorage imports
+
+OVS_DIR = "/opt/OpenvStorage"
+sys.path.append(OVS_DIR)
 
 
 class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
@@ -161,9 +187,21 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
             raise OSError(errno.errorcode[errno])
 
     def create_cloned_volume(self, volume, src_vref):
-        """Creates a clone of the specified volume."""
+        """
+        Creates a clone of the specified volume.
 
-        volume_name = "volume-" + str(volume.id)
+        :param volume: new volume object
+        :param src_vref: source volume object
+        """
+        # vdisk_name, vpool_name, new_vdisk_name, storagerouter_ip, api
+        source_volume_name = "volume-" + str(src_vref.id)
+        new_volume_name = "volume-" + str(volume.id)
+        storagerouter_ip = CONF.storagerouter_ip
+        vpool_name = CONF.volume_backend_name
+        LOG.debug('libovsvolumedriver.ovs_clone: new={0} source={1}'.format(volume.id, src_vref.id))
+
+
+
         raise NotImplementedError("Cloning volume from volume is not yet implemented")
 
     def copy_image_to_volume(self, context, volume, image_service, image_id):
