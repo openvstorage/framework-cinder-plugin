@@ -14,6 +14,10 @@ the patched `initiator/connector.py` can be found in this directory.
 OS_BRICK main `initiator/connector.py` : `https://github.com/openstack/os_brick/blob/master/os_brick/initiator/connector.py`
 Open vStorage custom connector: `initiator/connectors/openvstorage.py`
 
+After installation of these patches, you should restart the following services: 
+* nova-compute
+* cinder-volume
+
 ### line 85
 OPENVSTORAGE_EDGE = "OPENVSTORAGE_EDGE"
 
