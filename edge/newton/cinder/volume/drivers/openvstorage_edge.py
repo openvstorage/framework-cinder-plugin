@@ -246,12 +246,10 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
     def create_snapshot(self, snapshot):
         """Creates a snapshot."""
 
-        libovsvolumedriver, ctx = self._setup_ovsvolumedriver()
-        out = libovsvolumedriver.ovs_snapshot_create(ctx, str(snapshot['volume_name']), str(snapshot['name']),
-                                                     self.SNAPSHOT_CREATE_TIMEOUT)
-        LOG.debug('libovsvolumedriver.ovs_snapshot_create: {0} {1} {2} {3}'.format(ctx,
-                                                                                   str(snapshot['volume_name']),
-                                                                                   str(snapshot['name']), out))
+        location = self._get_volume_location(snapshot['volume_name'])
+        out = self._run_qemu_img('snapshot', location, '-c', snapshot['name'])
+        LOG.debug('libovsvolumedriver.ovs_snapshot_create: {0} {1} {2}'.format(str(snapshot['volume_name']),
+                                                                               str(snapshot['name']), out))
         if out == -1:
             errno = ctypes.get_errno()
             raise OSError(errno.errorcode[errno])
@@ -259,9 +257,10 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
     def delete_snapshot(self, snapshot):
         """Deletes a snapshot."""
 
-        libovsvolumedriver, ctx = self._setup_ovsvolumedriver()
-        out = libovsvolumedriver.ovs_snapshot_remove(ctx, str(snapshot['volume_name']), str(snapshot['name']))
-        LOG.debug('libovsvolumedriver.ovs_snapshot_remove: {0} {1} {2}'.format(ctx, str(snapshot), out))
+        location = self._get_volume_location(snapshot['volume_name'])
+        out = self._run_qemu_img('snapshot', location, '-d', snapshot['name'])
+        LOG.debug('libovsvolumedriver.ovs_snapshot_remove: {0} {1} {2}'.format(str(snapshot['volume_name']),
+                                                                               str(snapshot['name']), out))
 
         if out == -1:
             errno = ctypes.get_errno()
