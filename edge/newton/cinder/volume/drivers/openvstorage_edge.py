@@ -17,13 +17,13 @@ OpenStack Cinder driver - interface to Open vStorage Edge
 
 - uses qemu-img calls (requires qemu & libvirt-bin packages from openvstorage.com repo)
 
-sudo mkdir -p /opt/OpenvStorage/ci/api_lib/
+sudo mkdir -p /opt/OpenvStorage/
 sudo git clone https://github.com/openvstorage/framework-cinder-plugin.git /opt/OpenvStorage/
 cd /opt/OpenvStorage/
-sudo git checkout -b ovs-23-cinder-cleanup
-cd /opt/
+sudo git checkout ovs-23-cinder-cleanup
 sudo find . -type d -exec touch {}/__init__.py \;
-chown -R ovs-support:ovs-support OpenvStorage/
+cd /opt/
+sudo chown -R ovs-support:ovs-support OpenvStorage/
 """
 import sys
 import random
@@ -32,31 +32,12 @@ from ctypes import cdll, CDLL
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import six
 
+from cinder import exception
 from cinder import utils
 from cinder.image import image_utils
 from cinder.volume import driver
-
-
-LOG = logging.getLogger(__name__)
-OPTS = [cfg.StrOpt('management_ips',
-                   default=[],
-                   help='IP addresses of a Open vStorage master nodes'),
-        cfg.StrOpt('vpool_guid',
-                   default=None,
-                   help='Name of the used vPool'),
-        cfg.StrOpt('username',
-                   default='admin',
-                   help='Username of user used to access Open vStorage'),
-        cfg.StrOpt('password',
-                   default='admin',
-                   help='Password of user used to access Open vStorage'),
-        cfg.StrOpt('port',
-                   default=443,
-                   help='Port to reach Open vStorage API')]
-
-CONF = cfg.CONF
-CONF.register_opts(OPTS)
 
 # Open vStorage imports
 
@@ -68,6 +49,26 @@ from ci.api_lib.helpers.vdisk import VDiskHelper
 from ci.api_lib.helpers.storagedriver import StoragedriverHelper
 from ci.api_lib.helpers.storagerouter import StoragerouterHelper
 from ci.api_lib.setup.vdisk import VDiskSetup
+
+LOG = logging.getLogger(__name__)
+OPTS = [cfg.StrOpt('management_ips',
+                   default='10.100.199.191',
+                   help='IP addresses of a Open vStorage master nodes'),
+        cfg.StrOpt('vpool_guid',
+                   default='7968a798-a0ab-4f6a-8f3d-32f785215307',
+                   help='Name of the used vPool'),
+        cfg.StrOpt('username',
+                   default='admin',
+                   help='Username of user used to access Open vStorage'),
+        cfg.StrOpt('password',
+                   default='admin',
+                   help='Password of user used to access Open vStorage'),
+        cfg.StrOpt('port',
+                   default='443',
+                   help='Port to reach Open vStorage API')]
+
+CONF = cfg.CONF
+CONF.register_opts(OPTS)
 
 
 class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
@@ -88,9 +89,10 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         self.volume_backend_name = kwargs['host'].split('@')[1]
         LOG.debug('libovsvolumedriver.init {0} {1} {2} {3} {4}'.format(CONF.management_ips, CONF.vpool_guid,
                                                                        CONF.username, CONF.password, CONF.port))
+        cdll.LoadLibrary('libovsvolumedriver.so')
+        self.libovsvolumedriver = CDLL('libovsvolumedriver.so', use_errno=True)
 
-    @staticmethod
-    def _get_volume_location(volume_name, storage_ip=None):
+    def _get_volume_location(self, volume_name, storage_ip=None):
         """
         Return volume location for edge client
 
@@ -101,7 +103,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :return: volume location
         :rtype: str
         """
-        storagedriver = OpenvStorageEdgeVolumeDriver._get_storagedriver_information(storage_ip=storage_ip)
+        storagedriver = self._get_storagedriver_information(storage_ip=storage_ip)
         volume_location = 'openvstorage+{0}:{1}:{2}/{3}'.format(storagedriver['cluster_node_config']
                                                                 ['network_server_uri'].split(':')[0],
                                                                 storagedriver['storage_ip'],
@@ -110,8 +112,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         LOG.debug('libovsvolumedriver.generating.volume.location {0}'.format(volume_location))
         return volume_location
 
-    @staticmethod
-    def _get_storagedriver_information(storage_ip=None):
+    def _get_storagedriver_information(self, storage_ip=None):
         """
         Returns a storagedriver its information
         Currently a random storagedriver is chosen from the vpool if storage_ip is None,
@@ -120,7 +121,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :return: storagedriver information
         :rtype: dict
         """
-        api = OpenvStorageEdgeVolumeDriver._setup_ovs_client()
+        api = self._setup_ovs_client()
         data = StoragedriverHelper.get_storagedrivers_by_vpoolguid(vpool_guid=CONF.vpool_guid, api=api)
 
         # if a specific storagedriver is requested, provide this one. else provide a random one
@@ -141,10 +142,9 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :rtype: str
         """
 
-        return random.choice(CONF.management_ips)
+        return CONF.management_ips
 
-    @staticmethod
-    def _setup_ovs_client():
+    def _setup_ovs_client(self):
         """
         Sets up a OVSClient to contact the Open vStorage API
 
@@ -152,7 +152,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :return: ci.api_lib.helpers.api.OVSClient
         """
 
-        return OVSClient(ip=OpenvStorageEdgeVolumeDriver._get_management_ip(),
+        return OVSClient(ip=self._get_management_ip(),
                          username=CONF.username,
                          password=CONF.password)
 
@@ -174,20 +174,31 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         pass
 
     def do_setup(self, context):
-        """Any initialization the volume driver does while starting."""
-        cdll.LoadLibrary('libovsvolumedriver.so')
-        libovsvolumedriver = CDLL('libovsvolumedriver.so', use_errno=True)
-        ctx_attr = libovsvolumedriver.ovs_ctx_attr_new()
-        libovsvolumedriver.ovs_ctx_attr_set_transport(ctx_attr,
-                                                      self.configuration.edge_protocol,
-                                                      self.configuration.storage_ip,
-                                                      int(self.configuration.edge_port))
-        self.ctx = libovsvolumedriver.ovs_ctx_new(ctx_attr)
-        LOG.debug('libovsvolumedriver.do_setup {0} {1} {2} {3} > {4} '.format(ctx_attr,
-                                                                              self.configuration.edge_protocol,
-                                                                              self.configuration.storage_ip,
-                                                                              self.configuration.edge_port, self.ctx))
-        self.libovsvolumedriver = libovsvolumedriver
+        """
+        Any initialization the volume driver does while starting.
+        """
+        pass
+
+    def _setup_ovsvolumedriver(self):
+        """
+        Sets up the ovsvolumedriver
+
+        :return: libovsvolumedriver
+        :rtype: libovsvolumedriver
+        """
+
+        ctx_attr = self.libovsvolumedriver.ovs_ctx_attr_new()
+
+        # fetch first time setup information
+        storagedriver = self._get_storagedriver_information()
+        edge_protocol = storagedriver['cluster_node_config']['network_server_uri'].split(':')[0]
+
+        self.libovsvolumedriver.ovs_ctx_attr_set_transport(ctx_attr, edge_protocol, storagedriver['storage_ip'],
+                                                           int(storagedriver['ports']['edge']))
+        LOG.debug('libovsvolumedriver.do_setup {0} {1} {2} {3}'.format(ctx_attr, edge_protocol,
+                                                                       storagedriver['storage_ip'],
+                                                                       storagedriver['ports']['edge']))
+        return self.libovsvolumedriver, self.libovsvolumedriver.ovs_ctx_new(ctx_attr)
 
     # Volume operations
     def initialize_connection(self, volume, connector):
@@ -206,10 +217,10 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :return: volume location
         :rtype: dict
         """
-        volume_name = OpenvStorageEdgeVolumeDriver.VOLUME_PREFIX + str(volume.id)
-        location = OpenvStorageEdgeVolumeDriver._get_volume_location(volume_name)
-        out = OpenvStorageEdgeVolumeDriver._run_qemu_img('create', location, '{0}G'.format(volume.size))
-        LOG.debug('libovsvolumedriver.ovs_create_volume: {0} {1} {2} > {3}'.format(self.ctx, volume, volume.size, out))
+        volume_name = self.VOLUME_PREFIX + str(volume.id)
+        location = self._get_volume_location(volume_name)
+        out = self._run_qemu_img('create', location, '{0}G'.format(volume.size))
+        LOG.debug('libovsvolumedriver.ovs_create_volume: {0} {1} {2}'.format(volume.id, volume.size, out))
 
         if out == -1:
            raise OSError(errno.errorcode[ctypes.get_errno()])
@@ -224,9 +235,10 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
 
         :param volume: volume reference (sqlalchemy Model)
         """
-        volume_name = OpenvStorageEdgeVolumeDriver.VOLUME_PREFIX + str(volume.id)
-        out = self.libovsvolumedriver.ovs_remove_volume(self.ctx, volume_name)
-        LOG.debug('libovsvolumedriver.ovs_remove_volume: {0} {1} > {2}'.format(self.ctx, volume, out))
+        volume_name = self.VOLUME_PREFIX + str(volume.id)
+        libovsvolumedriver, ctx = self._setup_ovsvolumedriver()
+        out = libovsvolumedriver.ovs_remove_volume(ctx, volume_name)
+        LOG.debug('libovsvolumedriver.ovs_remove_volume: {0} {1} > {2}'.format(ctx, volume, out))
         if out == -1:
             errno = ctypes.get_errno()
             raise OSError(errno.errorcode[errno])
@@ -234,11 +246,10 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
     def create_snapshot(self, snapshot):
         """Creates a snapshot."""
 
-        out = self.libovsvolumedriver.ovs_snapshot_create(self.ctx,
-                                                          str(snapshot['volume_name']),
-                                                          str(snapshot['name']),
-                                                          OpenvStorageEdgeVolumeDriver.SNAPSHOT_CREATE_TIMEOUT)
-        LOG.debug('libovsvolumedriver.ovs_snapshot_create: {0} {1} {2} {3}'.format(self.ctx,
+        libovsvolumedriver, ctx = self._setup_ovsvolumedriver()
+        out = libovsvolumedriver.ovs_snapshot_create(ctx, str(snapshot['volume_name']), str(snapshot['name']),
+                                                     self.SNAPSHOT_CREATE_TIMEOUT)
+        LOG.debug('libovsvolumedriver.ovs_snapshot_create: {0} {1} {2} {3}'.format(ctx,
                                                                                    str(snapshot['volume_name']),
                                                                                    str(snapshot['name']), out))
         if out == -1:
@@ -248,10 +259,9 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
     def delete_snapshot(self, snapshot):
         """Deletes a snapshot."""
 
-        out = self.libovsvolumedriver.ovs_snapshot_remove(self.ctx,
-                                                          str(snapshot['volume_name']),
-                                                          str(snapshot['name']))
-        LOG.debug('libovsvolumedriver.ovs_snapshot_remove: {0} {1} {2}'.format(self.ctx, str(snapshot), out))
+        libovsvolumedriver, ctx = self._setup_ovsvolumedriver()
+        out = libovsvolumedriver.ovs_snapshot_remove(ctx, str(snapshot['volume_name']), str(snapshot['name']))
+        LOG.debug('libovsvolumedriver.ovs_snapshot_remove: {0} {1} {2}'.format(ctx, str(snapshot), out))
 
         if out == -1:
             errno = ctypes.get_errno()
@@ -264,11 +274,11 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :param volume: new volume object
         :param src_vref: source volume object
         """
-        source_volume_name = OpenvStorageEdgeVolumeDriver.VOLUME_PREFIX + str(src_vref.id)
-        new_volume_name = OpenvStorageEdgeVolumeDriver.VOLUME_PREFIX + str(volume.id)
+        source_volume_name = self.VOLUME_PREFIX + str(src_vref.id)
+        new_volume_name = self.VOLUME_PREFIX + str(volume.id)
         LOG.debug('libovsvolumedriver.ovs_clone new={0} source={1}'.format(volume.id, src_vref.id))
 
-        api = OpenvStorageEdgeVolumeDriver._setup_ovs_client()
+        api = self._setup_ovs_client()
         # pick a random storagerouter to deploy the new clone on
         storagerouter_ip = random.choice([sr for sr in StoragerouterHelper.get_storagerouters(api=api).values()
                                           if CONF.vpool_guid in sr['vpools_guids']])
@@ -287,26 +297,25 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :param image_service: image service reference
         :param image_id: id of the image
         """
-        volume_name = OpenvStorageEdgeVolumeDriver.VOLUME_PREFIX + str(volume.id)
-
-        # check if volume exists
-        storage_ip = VDiskHelper.get_vdisk_location_by_name(vdisk_name=volume_name, vpool_guid=CONF.vpool_guid)
-        location = OpenvStorageEdgeVolumeDriver._get_volume_location(volume_name=volume_name, storage_ip=storage_ip)
-
+        volume_name = self.VOLUME_PREFIX + str(volume.id)
+        location = self._get_volume_location(volume_name=volume_name)
         image_path = os.path.join('/tmp', image_id)
         if not os.path.exists(image_path):
             image_utils.fetch_to_raw(context, image_service, image_id, image_path, '1M', size=volume['size'])
-        OpenvStorageEdgeVolumeDriver._run_qemu_img('convert', '-n', '-O', 'raw', image_path, location)
+        self._run_qemu_img('convert', '-n', '-O', 'raw', image_path, location)
+        LOG.debug('libovsvolumedriver.ovs_copy_image_to_volume {0} {1}'.format(volume.id, image_id))
 
     def extend_volume(self, volume, size_gb):
         """Extend volume to new size size_gb."""
         if size_gb < volume.size:
             raise RuntimeError('Cannot shrink volume: {0} > {1}'.format(volume.size, size_gb))
 
-        volume_name = OpenvStorageEdgeVolumeDriver.VOLUME_PREFIX + str(volume.id)
-        out = self.libovsvolumedriver.ovs_truncate_volume(self.ctx, str(volume_name), ctypes.c_uint64(size_gb*1024**3))
-        LOG.debug('libovsvolumedriver.ovs_truncate_volume: {0} {1} {2} < {3}, {4}'.format(self.ctx, volume.id,
-                                                                                          volume.size, size_gb, out))
+        volume_name = self.VOLUME_PREFIX + str(volume.id)
+        location = self._get_volume_location(volume_name)
+        out = self._run_qemu_img('resize', location, '{0}G'.format(size_gb))
+
+        LOG.debug('libovsvolumedriver.ovs_truncate_volume: {0} {1} {2} < {3}'.format(volume.id, volume.size, size_gb,
+                                                                                     out))
 
         if out == -1:
             raise OSError(errno.errorcode[ctypes.get_errno()])

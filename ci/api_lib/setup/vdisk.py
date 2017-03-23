@@ -59,7 +59,7 @@ class VDiskSetup(object):
         """
 
         # fetch the requirements
-        vdisk_guid = VDiskHelper.get_vdisk_guid_by_name(vdisk_name=vdisk_name, vpool_guid=vpool_guid)
+        vdisk_guid = VDiskHelper.get_vdisk_guid_by_name(vdisk_name=vdisk_name, vpool_guid=vpool_guid, api=api)
         storagerouter_guid = StoragerouterHelper.get_storagerouter_guid_by_ip(storagerouter_ip=storagerouter_ip,
                                                                               api=api)
 

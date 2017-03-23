@@ -79,5 +79,6 @@ class VDiskHelper(object):
         :return: a vdisk
         :rtype: dict
         """
-        return [vdisk for vdisk in api.get(api='/vdisks', params={'contents': 'storagedriver_id', 'vpoolguid': vpool_guid})
+        return [vdisk for vdisk in api.get(api='/vdisks',
+                                           params={'contents': 'storagedriver_id', 'vpoolguid': vpool_guid})['data']
                 if vdisk['name'] == vdisk_name][0]

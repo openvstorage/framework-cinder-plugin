@@ -64,8 +64,6 @@ class StoragerouterHelper(object):
         :rtype: str
         """
 
-        data = StoragerouterHelper.get_storagerouters(api=api)
-        if not data.get(storagerouter_ip):
-            raise RuntimeError("No storagerouter with ip {0} was found".format(storagerouter_ip))
-        else:
-            return data.get(storagerouter_ip)['guid']
+        for key,value in StoragerouterHelper.get_storagerouters(api=api).iteritems():
+            if key == storagerouter_ip:
+                return value['guid']
