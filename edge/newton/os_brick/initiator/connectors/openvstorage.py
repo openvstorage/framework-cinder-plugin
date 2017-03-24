@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_utils import fileutils
 
@@ -25,8 +26,8 @@ class OpenvStorageEdgeConnector(initiator_connector.InitiatorConnector):
     def __init__(self, root_helper, driver=None, execute=None,
                  device_scan_attempts=DEVICE_SCAN_ATTEMPTS_DEFAULT,
                  *args, **kwargs):
-        super(OpenvStorageEdgeConnector, self).__init__(root_helper, execute=execute,
-                                                       *args, **kwargs)
+        super(OpenvStorageEdgeConnector, self).__init__(root_helper, execute=execute, *args, **kwargs)
+        LOG.debug('OVSEdgeConnector.init')
 
     @staticmethod
     def get_connector_properties(root_helper, *args, **kwargs):
@@ -41,7 +42,7 @@ class OpenvStorageEdgeConnector(initiator_connector.InitiatorConnector):
         :type run_as_root: bool
         :returns: bool
         """
-        LOG.debug('OVSEdgeConnector check_valid_device {0}'.format(path))
+        LOG.debug('OVSEdgeConnector.check_valid_device {0}'.format(path))
 
     def connect_volume(self, connection_properties):
         """Connect to a volume.
@@ -55,11 +56,8 @@ class OpenvStorageEdgeConnector(initiator_connector.InitiatorConnector):
         :type connection_properties: dict
         :returns: dict
         """
-        LOG.debug('OVSEdgeConnector connect_volume {0}'.format(connection_properties))
-        device_info = {'type': 'openvstorage_edge',
-                       'path': connection_properties['device_path']}
-
-        return device_info
+        LOG.debug('OVSEdgeConnector.connect_volume {0}'.format(connection_properties))
+        return connection_properties['data']['device_path']
 
     def disconnect_volume(self, connection_properties, device_info):
         """Disconnect a volume from the local host.
@@ -71,7 +69,7 @@ class OpenvStorageEdgeConnector(initiator_connector.InitiatorConnector):
         :param device_info: historical difference, but same as connection_props
         :type device_info: dict
         """
-        LOG.debug('OVSEdgeConnector disconnect_volume {0} {1}'.format(connection_properties, device_info))
+        LOG.debug('OVSEdgeConnector.disconnect_volume {0} {1}'.format(connection_properties, device_info))
 
     def get_volume_paths(self, connection_properties):
         """Return the list of existing paths for a volume.
@@ -82,7 +80,7 @@ class OpenvStorageEdgeConnector(initiator_connector.InitiatorConnector):
                                       of the target volume attributes.
         :type connection_properties: dict
         """
-        LOG.debug('OVSEdgeConnector get_volume_paths {0}'.format(connection_properties))
+        LOG.debug('OVSEdgeConnector.get_volume_paths {0}'.format(connection_properties))
         path = connection_properties['device_path']
         return [path]
 
@@ -91,7 +89,7 @@ class OpenvStorageEdgeConnector(initiator_connector.InitiatorConnector):
         Some Connectors need the information in the
         connection_properties to determine the search path.
         """
-        LOG.debug('OVSEdgeConnector get_search_path > returning None')
+        LOG.debug('OVSEdgeConnector.get_search_path > returning None')
         return None
 
     def extend_volume(self, connection_properties):
@@ -103,7 +101,7 @@ class OpenvStorageEdgeConnector(initiator_connector.InitiatorConnector):
         :param connection_properties: The volume connection properties.
         :returns: new size of the volume.
         """
-        LOG.debug('OVSEdgeConnector extend_volume {0}'.format(connection_properties))
+        LOG.debug('OVSEdgeConnector.extend_volume {0}'.format(connection_properties))
 
     def get_all_available_volumes(self, connection_properties=None):
         """Return all volumes that exist in the search directory.
@@ -118,5 +116,5 @@ class OpenvStorageEdgeConnector(initiator_connector.InitiatorConnector):
                                       of the target volume attributes.
         :type connection_properties: dict
         """
-        LOG.debug('OVSEdgeConnector get_all_available_volumes {0}'.format(connection_properties))
+        LOG.debug('OVSEdgeConnector.get_all_available_volumes {0}'.format(connection_properties))
         return []

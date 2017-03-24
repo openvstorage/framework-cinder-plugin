@@ -45,17 +45,16 @@ OVS_DIR = "/opt/OpenvStorage"
 sys.path.append(OVS_DIR)
 
 from ci.api_lib.helpers.api import OVSClient
-from ci.api_lib.helpers.vdisk import VDiskHelper
 from ci.api_lib.helpers.storagedriver import StoragedriverHelper
 from ci.api_lib.helpers.storagerouter import StoragerouterHelper
 from ci.api_lib.setup.vdisk import VDiskSetup
 
 LOG = logging.getLogger(__name__)
 OPTS = [cfg.StrOpt('management_ips',
-                   default='10.100.199.191',
-                   help='IP addresses of a Open vStorage master nodes'),
+                   default='',
+                   help='IP addresses of a Open vStorage master nodes, seperated by comma without spaces'),
         cfg.StrOpt('vpool_guid',
-                   default='7968a798-a0ab-4f6a-8f3d-32f785215307',
+                   default='',
                    help='Name of the used vPool'),
         cfg.StrOpt('username',
                    default='admin',
@@ -87,10 +86,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         super(OpenvStorageEdgeVolumeDriver, self).__init__(*args, **kwargs)
         self.configuration.append_config_values(OPTS)
         self.volume_backend_name = kwargs['host'].split('@')[1]
-        LOG.debug('libovsvolumedriver.init {0} {1} {2} {3} {4}'.format(CONF.management_ips, CONF.vpool_guid,
-                                                                       CONF.username, CONF.password, CONF.port))
-        cdll.LoadLibrary('libovsvolumedriver.so')
-        self.libovsvolumedriver = CDLL('libovsvolumedriver.so', use_errno=True)
+        LOG.debug('libovsvolumedriver.init')
 
     def _get_volume_location(self, volume_name, storage_ip=None):
         """
@@ -122,7 +118,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :rtype: dict
         """
         api = self._setup_ovs_client()
-        data = StoragedriverHelper.get_storagedrivers_by_vpoolguid(vpool_guid=CONF.vpool_guid, api=api)
+        data = StoragedriverHelper.get_storagedrivers_by_vpoolguid(vpool_guid=self.vpool_guid, api=api)
 
         # if a specific storagedriver is requested, provide this one. else provide a random one
         if storage_ip:
@@ -132,17 +128,16 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         LOG.debug('libovsvolumedriver.get_storagedriver_information {0}'.format(storagedriver))
         return storagedriver
 
-    @staticmethod
-    def _get_management_ip():
+    def _get_management_ip(self):
         """
-        Returns a available ip address to contact Open vStorage
+        Returns a available ip address to contact Open vStorage MASTER NODE
         Currently a random ip is given. In the future this could be HA tested
 
         :return: management ip
         :rtype: str
         """
 
-        return CONF.management_ips
+        return random.choice(self.management_ips.split(','))
 
     def _setup_ovs_client(self):
         """
@@ -153,8 +148,8 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         """
 
         return OVSClient(ip=self._get_management_ip(),
-                         username=CONF.username,
-                         password=CONF.password)
+                         username=self.username,
+                         password=self.password)
 
     @staticmethod
     def _run_qemu_img(command, *params):
@@ -177,7 +172,16 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         """
         Any initialization the volume driver does while starting.
         """
-        pass
+        self.management_ips = str(self.configuration.management_ips)
+        self.vpool_guid = str(self.configuration.vpool_guid)
+        self.username = str(self.configuration.username)
+        self.password = str(self.configuration.password)
+        self.port = int(self.configuration.port)
+        LOG.debug('libovsvolumedriver.do_setup {0} {1} {2} {3} {4}'.format(self.management_ips,
+                                                                           self.vpool_guid,
+                                                                           self.username,
+                                                                           self.password,
+                                                                           self.port))
 
     def _setup_ovsvolumedriver(self):
         """
@@ -280,9 +284,9 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         api = self._setup_ovs_client()
         # pick a random storagerouter to deploy the new clone on
         storagerouter_ip = random.choice([sr for sr in StoragerouterHelper.get_storagerouters(api=api).values()
-                                          if CONF.vpool_guid in sr['vpools_guids']])
+                                          if self.vpool_guid in sr['vpools_guids']])
         VDiskSetup.create_clone(vdisk_name=source_volume_name, new_vdisk_name=new_volume_name,
-                                storagerouter_ip=storagerouter_ip, api=api, vpool_guid=CONF.vpool_guid)
+                                storagerouter_ip=storagerouter_ip, api=api, vpool_guid=self.vpool_guid)
 
     def copy_image_to_volume(self, context, volume, image_service, image_id):
         """
