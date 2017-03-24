@@ -56,8 +56,8 @@ class VDiskHelper(object):
         :type vpool_guid: str
         :param api: specify a valid api connection to the setup
         :type api: ci.helpers.api.OVSClient
-        :return: a storage ip
-        :rtype: str
+        :return: a dict
+        :rtype: dict
         """
         storagedrivers = StoragedriverHelper.get_storagedrivers_by_vpoolguid(vpool_guid=vpool_guid, api=api)
         storagedriver_id = VDiskHelper.get_vdisk_by_name(vdisk_name=vdisk_name, vpool_guid=vpool_guid, api=api)['storagedriver_id']
