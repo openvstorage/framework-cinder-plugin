@@ -23,7 +23,7 @@ class VDiskHelper(object):
     vDiskHelper class
     """
 
-    LOGGER = LogHandler.get(source="setup", name="ci_vdisk_setup")
+    LOGGER = LogHandler.get(source="helpers", name="ci_vdisk_helper")
 
     def __init__(self):
         pass
