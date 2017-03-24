@@ -61,7 +61,7 @@ class VDiskHelper(object):
         """
         storagedrivers = StoragedriverHelper.get_storagedrivers_by_vpoolguid(vpool_guid=vpool_guid, api=api)
         storagedriver_id = VDiskHelper.get_vdisk_by_name(vdisk_name=vdisk_name, vpool_guid=vpool_guid, api=api)['storagedriver_id']
-        return [sd['storage_ip'] for sd in storagedrivers if sd['storagedriver_id'] == storagedriver_id][0]
+        return [sd for sd in storagedrivers if sd['storagedriver_id'] == storagedriver_id][0]
 
     @staticmethod
     def get_vdisk_by_name(vdisk_name, vpool_guid, api):
