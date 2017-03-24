@@ -56,7 +56,29 @@ class VDiskHelper(object):
         :type vpool_guid: str
         :param api: specify a valid api connection to the setup
         :type api: ci.helpers.api.OVSClient
-        :return: a dict
+        :return: a dict of a storagedriver
+        {u'cluster_ip': u'10.100.199.192',
+         u'cluster_node_config': {u'failovercache_host': u'10.100.199.192',
+          u'failovercache_port': 26208,
+          u'host': u'10.100.199.192',
+          u'message_port': 26206,
+          u'network_server_uri': u'tcp://10.100.199.192:26209',
+          u'node_distance_map': {u'myvpool01UzU8PHIryg5Y4e5b': 10000,
+           u'myvpool01t73EUyATNxpzfUvE': 10000},
+          u'vrouter_id': u'myvpool014CCmf5mMoqd22tPW',
+          u'xmlrpc_host': u'10.100.199.192',
+          u'xmlrpc_port': 26207},
+         u'description': u'myvpool014CCmf5mMoqd22tPW',
+         u'guid': u'adbff642-ba97-4ebb-9ee3-56cb19f7fc97',
+         u'mountpoint': u'/mnt/myvpool01',
+         u'name': u'myvpool014CCmf5mMoqd22tPW',
+         u'ports': {u'dtl': 26208,
+          u'edge': 26209,
+          u'management': 26206,
+          u'xmlrpc': 26207},
+         u'startup_counter': 1,
+         u'storage_ip': u'10.100.199.192',
+         u'storagedriver_id': u'myvpool014CCmf5mMoqd22tPW'}
         :rtype: dict
         """
         storagedrivers = StoragedriverHelper.get_storagedrivers_by_vpoolguid(vpool_guid=vpool_guid, api=api)
@@ -77,6 +99,18 @@ class VDiskHelper(object):
         :param api: specify a valid api connection to the setup
         :type api: ci.helpers.api.OVSClient
         :return: a vdisk
+        {u'cinder_id': None,
+         u'description': None,
+         u'devicename': u'/volume-3a78def9-c92e-47a0-9343-3c05888eea30.raw',
+         u'guid': u'7a5bfcd2-e6d4-455f-aa0f-ab1b4878db59',
+         u'has_manual_dtl': False,
+         u'metadata': {u'cluster_multiplier': 8, u'lba_size': 512},
+         u'name': u'volume-3a78def9-c92e-47a0-9343-3c05888eea30',
+         u'pagecache_ratio': 1.0,
+         u'parentsnapshot': None,
+         u'size': 1073741824,
+         u'storagedriver_id': u'myvpool014CCmf5mMoqd22tPW',
+         u'volume_id': u'c42d5dbb-d1d9-4fa6-b626-41b72ab046e2'}
         :rtype: dict
         """
         return [vdisk for vdisk in api.get(api='/vdisks',
