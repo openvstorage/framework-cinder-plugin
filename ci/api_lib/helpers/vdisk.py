@@ -152,9 +152,10 @@ class VDiskHelper(object):
           u'label': u'bla',
           u'stored': 0,
           u'timestamp': u'1490605267'},
-         u'3a78def9-c92e-47a0-9343-3c05888eea30')
+         u'7a5bfcd2-e6d4-455f-aa0f-ab1b4878db59',
+         u'volume-3a78def9-c92e-47a0-9343-3c05888eea30')
         :rtype: tuple
         """
         vdisks = VDiskHelper.list_vdisks(vpool_guid=vpool_guid, api=api, contents='snapshots')
-        return next((snapshot, vdisk['guid']) for vdisk in vdisks for snapshot in vdisk['snapshots']
+        return next((snapshot, vdisk['guid'], vdisk['name']) for vdisk in vdisks for snapshot in vdisk['snapshots']
                     if snapshot["label"] == snapshot_name)

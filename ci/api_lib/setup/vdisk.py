@@ -67,8 +67,8 @@ class VDiskSetup(object):
             data = {"name": new_vdisk_name,
                     "storagerouter_guid": storagerouter_guid}
         else:
-            snapshot, vdisk_guid = VDiskHelper.get_snapshot_by_name(snapshot_name=snapshot_name,
-                                                                    vpool_guid=vpool_guid, api=api)
+            snapshot, vdisk_guid, vdisk_name = VDiskHelper.get_snapshot_by_name(snapshot_name=snapshot_name,
+                                                                                vpool_guid=vpool_guid, api=api)
             data = {"name": new_vdisk_name,
                     "storagerouter_guid": storagerouter_guid,
                     "snapshot_id": snapshot.get('guid')}
@@ -87,4 +87,83 @@ class VDiskSetup(object):
         else:
             VDiskSetup.LOGGER.info("Creating clone `{0}` on vPool `{1}` on storagerouter `{2}` should have succeeded"
                                    .format(vdisk_name, vpool_guid, storagerouter_ip))
+            return task_result[1]
+
+    @staticmethod
+    def create_snapshot(snapshot_name, vdisk_name, vpool_guid, api, consistent=False, sticky=True,
+                        timeout=CREATE_SNAPSHOT_TIMEOUT):
+        """
+        Create a new snapshot for a vdisk
+        :param vdisk_name: location of a vdisk on a vpool
+                           (e.g. /mnt/vpool/test.raw = test, /mnt/vpool/volumes/test.raw = volumes/test )
+        :type vdisk_name: str
+        :param snapshot_name: name of a new snapshot
+        :type snapshot_name: str
+        :param consistent: was everything properly flushed to the backend?
+        :type consistent: bool
+        :param sticky: let this snapshot stick forever?
+        :type sticky: bool
+        :param api: specify a valid api connection to the setup
+        :type api: ci.helpers.api.OVSClient
+        :param timeout: time to wait for the task to complete
+        :type timeout: int
+        :param vpool_guid: guid of a existing vpool
+        :type vpool_guid: str
+        :return: snapshot guid
+        :rtype: str
+        """
+        vdisk_guid = VDiskHelper.get_vdisk_by_name(vdisk_name=vdisk_name, vpool_guid=vpool_guid, api=api)['guid']
+
+        data = {
+            'name': snapshot_name,
+            'consistent': consistent,
+            'sticky': sticky
+        }
+
+        task_guid = api.post(
+            api='/vdisks/{0}/create_snapshot/'.format(vdisk_guid),
+            data=data
+        )
+        task_result = api.wait_for_task(task_id=task_guid, timeout=timeout)
+
+        if not task_result[0]:
+            error_msg = "Creating snapshot `{0}` for vdisk `{1}` on vPool `{2}` has failed" \
+                .format(snapshot_name, vdisk_name, vpool_guid)
+            VDiskSetup.LOGGER.error(error_msg)
+            raise RuntimeError(error_msg)
+        else:
+            VDiskSetup.LOGGER.info("Creating snapshot `{0}` for vdisk `{1}` on vPool `{2}` should have succeeded"
+                                   .format(snapshot_name, vdisk_name, vpool_guid))
+            return task_result[1]
+
+    @staticmethod
+    def rollback_to_snapshot(vpool_guid, snapshot_name, api, timeout=ROLLBACK_VDISK_TIMEOUT):
+        """
+        Rollback a vdisk to a certain snapshot
+
+        :param vpool_guid: guid of a existing vpool
+        :type vpool_guid: str
+        :param snapshot_name: name of a snapshot for the chosen vdisk
+        :type snapshot_name: str
+        :param api: specify a valid api connection to the setup
+        :type api: ci.helpers.api.OVSClient
+        :param timeout: time to wait for the task to complete
+        """
+
+        # fetch the requirements
+        snapshot, vdisk_guid, vdisk_name = VDiskHelper.get_snapshot_by_name(snapshot_name=snapshot_name,
+                                                                            vpool_guid=vpool_guid, api=api)
+
+        task_guid = api.post(
+            api='/vdisks/{0}/rollback'.format(vdisk_guid),
+            data={"timestamp": snapshot['timestamp']}
+        )
+        task_result = api.wait_for_task(task_id=task_guid, timeout=timeout)
+
+        if not task_result[0]:
+            error_msg = "Rollback vDisk `{0}` has failed with error {1}".format(vdisk_name, task_result[1])
+            VDiskSetup.LOGGER.error(error_msg)
+            raise RuntimeError(error_msg)
+        else:
+            VDiskSetup.LOGGER.info("Rollback vDisk `{0}` should have succeeded".format(vdisk_name))
             return task_result[1]
