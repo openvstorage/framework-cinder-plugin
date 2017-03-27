@@ -78,6 +78,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
     VERSION = '0.0.1'
     SNAPSHOT_CREATE_TIMEOUT = 120
     VOLUME_PREFIX = "volume-"
+    SNAPSHOT_BACKUP_PREFIX = "backup-"
 
     def __init__(self, *args, **kwargs):
         """
@@ -271,6 +272,49 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         if out == -1:
             errno = ctypes.get_errno()
             raise OSError(errno.errorcode[errno])
+
+    def backup_volume(self, context, backup, backup_service):
+        """
+        Create a new backup from an existing volume.
+
+        A backup is always marked as consistent
+        """
+        volume_name = self.VOLUME_PREFIX + str(backup['volume_id'])
+        backup_snapshot_name = self.SNAPSHOT_BACKUP_PREFIX + str(backup['id'])
+        LOG.debug('libovsvolumedriver.ovs_backup_create {0} {1}'.format(volume_name, backup_snapshot_name))
+
+        api = self._setup_ovs_client()
+        VDiskSetup.create_snapshot(snapshot_name=backup_snapshot_name, vdisk_name=volume_name,
+                                   vpool_guid=self.vpool_guid, api=api, consistent=True, sticky=True)
+
+    def restore_backup(self, context, backup, volume, backup_service):
+        """
+        Restore an existing backup to a new or existing volume.
+        """
+
+        volume_name = self.VOLUME_PREFIX + str(volume.id)
+        backup_snapshot_name = self.SNAPSHOT_BACKUP_PREFIX + str(backup['id'])
+        LOG.debug('libovsvolumedriver.ovs_backup_restore {0} {1}'.format(volume_name, backup_snapshot_name))
+
+        api = self._setup_ovs_client()
+        snapshot, vdisk_guid, vdisk_name = VDiskHelper.get_snapshot_by_name(snapshot_name=backup_snapshot_name,
+                                                                            vpool_guid=self.vpool_guid, api=api)
+        if vdisk_name == volume_name:
+            # rollback
+            VDiskSetup.rollback_to_snapshot(vpool_guid=self.vpool_guid, snapshot_name=backup_snapshot_name, api=api)
+        else:
+            # to new volume
+            storagerouter_ip = random.choice([sr for sr in StoragerouterHelper.get_storagerouters(api=api).values()
+                                              if self.vpool_guid in sr['vpools_guids']])
+            VDiskSetup.create_clone(vpool_guid=self.vpool_guid, new_vdisk_name=volume_name,
+                                    storagerouter_ip=storagerouter_ip, api=api, snapshot_name=backup_snapshot_name)
+
+            # return volume location
+            storage_ip = VDiskHelper.get_vdisk_location_by_name(vdisk_name=volume_name,
+                                                                vpool_guid=self.vpool_guid, api=api)['storage_ip']
+            location = self._get_volume_location(volume_name=volume_name, storage_ip=storage_ip)
+            volume['provider_location'] = location
+            return {'provider_location': volume['provider_location']}
 
     def create_cloned_volume(self, volume, src_vref):
         """
