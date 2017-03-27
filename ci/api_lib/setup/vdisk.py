@@ -33,17 +33,18 @@ class VDiskSetup(object):
         pass
 
     @staticmethod
-    def create_clone(vdisk_name, vpool_guid, new_vdisk_name, storagerouter_ip, api, timeout=CREATE_CLONE_TIMEOUT):
+    def create_clone(vpool_guid, new_vdisk_name, storagerouter_ip, api, timeout=CREATE_CLONE_TIMEOUT,
+                     snapshot_name=None, vdisk_name=None):
         """
         Create a new vDisk on a certain vPool/storagerouter
 
         :param vdisk_name: location of a vdisk on a vpool
-                           (e.g. /mnt/vpool/test.raw = test.raw, /mnt/vpool/volumes/test.raw = volumes/test.raw )
+                           (e.g. /mnt/vpool/test.raw = test, /mnt/vpool/volumes/test.raw = volumes/test )
         :type vdisk_name: str
         :param vpool_guid: guid of a existing vpool
         :type vpool_guid: str
         :param new_vdisk_name: location of the NEW vdisk on the vpool
-                           (e.g. /mnt/vpool/test.raw = test.raw, /mnt/vpool/volumes/test.raw = volumes/test.raw )
+                           (e.g. /mnt/vpool/test.raw = test, /mnt/vpool/volumes/test.raw = volumes/test )
         :type new_vdisk_name: str
         :param storagerouter_ip: ip address of a existing storagerouter where the clone will be deployed
         :type storagerouter_ip: str
@@ -51,20 +52,26 @@ class VDiskSetup(object):
         :type api: ci.helpers.api.OVSClient
         :param timeout: time to wait for the task to complete
         :type timeout: int
+        :param snapshot_name: name of a existing snapshot (DEFAULT=None -> will create new snapshot)
+        :type snapshot_name: str
         :return: details about cloned vdisk e.g
         {u'backingdevice': u'/test2.raw',
          u'name': u'test2',
          u'vdisk_guid': u'c4414c07-3796-4dcd-96a1-2cb00f4dc82b'}
         :rtype: dict
         """
-
-        # fetch the requirements
-        vdisk_guid = VDiskHelper.get_vdisk_guid_by_name(vdisk_name=vdisk_name, vpool_guid=vpool_guid, api=api)
         storagerouter_guid = StoragerouterHelper.get_storagerouter_guid_by_ip(storagerouter_ip=storagerouter_ip,
                                                                               api=api)
-
-        data = {"name": new_vdisk_name,
-                "storagerouter_guid": storagerouter_guid}
+        if not snapshot_name:
+            vdisk_guid = VDiskHelper.get_vdisk_guid_by_name(vdisk_name=vdisk_name, vpool_guid=vpool_guid, api=api)
+            data = {"name": new_vdisk_name,
+                    "storagerouter_guid": storagerouter_guid}
+        else:
+            snapshot, vdisk_guid = VDiskHelper.get_snapshot_by_name(snapshot_name=snapshot_name,
+                                                                    vpool_guid=vpool_guid, api=api)
+            data = {"name": new_vdisk_name,
+                    "storagerouter_guid": storagerouter_guid,
+                    "snapshot_id": snapshot.get('guid')}
 
         task_guid = api.post(
             api='/vdisks/{0}/clone'.format(vdisk_guid),

@@ -96,8 +96,6 @@ class VDiskHelper(object):
         :type vpool_guid: str
         :param api: specify a valid api connection to the setup
         :type api: ci.helpers.api.OVSClient
-        :param api: specify a valid api connection to the setup
-        :type api: ci.helpers.api.OVSClient
         :return: a vdisk
         {u'cinder_id': None,
          u'description': None,
@@ -113,6 +111,50 @@ class VDiskHelper(object):
          u'volume_id': u'c42d5dbb-d1d9-4fa6-b626-41b72ab046e2'}
         :rtype: dict
         """
-        return [vdisk for vdisk in api.get(api='/vdisks',
-                                           params={'contents': 'storagedriver_id', 'vpoolguid': vpool_guid})['data']
+        return [vdisk for vdisk in VDiskHelper.list_vdisks(vpool_guid=vpool_guid, api=api, contents='storagedriver_id')
                 if vdisk['name'] == vdisk_name][0]
+
+    @staticmethod
+    def list_vdisks(vpool_guid, api, contents=''):
+        """
+        Lists the vdisks with a optional extra content
+
+        :param vpool_guid: guid of a existing vpool
+        :type vpool_guid: str
+        :param api: specify a valid api connection to the setup
+        :type api: ci.helpers.api.OVSClient
+        :param contents: optional extra content
+        :type contents: str
+        :return:
+        """
+
+        return api.get(api='/vdisks', params={'contents': contents, 'vpoolguid': vpool_guid})['data']
+
+    @staticmethod
+    def get_snapshot_by_name(snapshot_name, vpool_guid, api):
+        """
+        Fetch snapshot by snapshot_name
+
+        :param snapshot_name: name of a existing snapshot
+        :type snapshot_name: str
+        :param vpool_guid: guid of a existing vpool
+        :type vpool_guid: str
+        :param api: specify a valid api connection to the setup
+        :type api: ci.helpers.api.OVSClient
+        :param api: specify a valid api connection to the setup
+        :type api: ci.helpers.api.OVSClient
+        :return: vdisk name & snapshot
+        ({u'guid': u'61d57466-1912-441f-b672-10f983f9051d',
+          u'in_backend': True,
+          u'is_automatic': False,
+          u'is_consistent': False,
+          u'is_sticky': False,
+          u'label': u'bla',
+          u'stored': 0,
+          u'timestamp': u'1490605267'},
+         u'3a78def9-c92e-47a0-9343-3c05888eea30')
+        :rtype: tuple
+        """
+        vdisks = VDiskHelper.list_vdisks(vpool_guid=vpool_guid, api=api, contents='snapshots')
+        return next((snapshot, vdisk['guid']) for vdisk in vdisks for snapshot in vdisk['snapshots']
+                    if snapshot["label"] == snapshot_name)
