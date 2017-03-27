@@ -47,7 +47,9 @@ sys.path.append(OVS_DIR)
 from ci.api_lib.helpers.api import OVSClient
 from ci.api_lib.helpers.storagedriver import StoragedriverHelper
 from ci.api_lib.helpers.storagerouter import StoragerouterHelper
+from ci.api_lib.helpers.vdisk import VDiskHelper
 from ci.api_lib.setup.vdisk import VDiskSetup
+
 
 LOG = logging.getLogger(__name__)
 OPTS = [cfg.StrOpt('management_ips',
@@ -288,6 +290,42 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         VDiskSetup.create_clone(vdisk_name=source_volume_name, new_vdisk_name=new_volume_name,
                                 storagerouter_ip=storagerouter_ip, api=api, vpool_guid=self.vpool_guid)
 
+        # return volume location
+        storage_ip = VDiskHelper.get_vdisk_location_by_name(vdisk_name=new_volume_name,
+                                                            vpool_guid=self.vpool_guid, api=api)['storage_ip']
+        location = self._get_volume_location(volume_name=new_volume_name,storage_ip=storage_ip)
+        volume['provider_location'] = location
+        return {'provider_location': volume['provider_location']}
+
+        # @TODO: if a new size is given we should trigger extend volume
+
+    def create_volume_from_snapshot(self, volume, snapshot):
+        """
+        Creates a volume from a snapshot.
+
+        :param volume: new volume object
+        :param snapshot: existing snapshot object
+        """
+
+        new_volume_name = self.VOLUME_PREFIX + str(volume.id)
+        LOG.debug('libovsvolumedriver.ovs_clone_from_snapshot {0} '.format(volume.id))
+
+        api = self._setup_ovs_client()
+        # pick a random storagerouter to deploy the new clone on
+        storagerouter_ip = random.choice([sr for sr in StoragerouterHelper.get_storagerouters(api=api).values()
+                                          if self.vpool_guid in sr['vpools_guids']])
+        VDiskSetup.create_clone(new_vdisk_name=new_volume_name, storagerouter_ip=storagerouter_ip, api=api,
+                                vpool_guid=self.vpool_guid, snapshot_name=snapshot['name'])
+
+        # return volume location
+        storage_ip = VDiskHelper.get_vdisk_location_by_name(vdisk_name=new_volume_name,
+                                                            vpool_guid=self.vpool_guid, api=api)['storage_ip']
+        location = self._get_volume_location(volume_name=new_volume_name, storage_ip=storage_ip)
+        volume['provider_location'] = location
+        return {'provider_location': volume['provider_location']}
+
+        # @TODO: if a new size is given we should trigger extend volume
+
     def copy_image_to_volume(self, context, volume, image_service, image_id):
         """
         Copy image to volume
@@ -309,7 +347,9 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         LOG.debug('libovsvolumedriver.ovs_copy_image_to_volume {0} {1}'.format(volume.id, image_id))
 
     def extend_volume(self, volume, size_gb):
-        """Extend volume to new size size_gb."""
+        """
+        Extend volume to new size in size_gb.
+        """
         if size_gb < volume.size:
             raise RuntimeError('Cannot shrink volume: {0} > {1}'.format(volume.size, size_gb))
 
@@ -322,6 +362,14 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
 
         if out == -1:
             raise OSError(errno.errorcode[ctypes.get_errno()])
+
+    def migrate_volume(self, ctxt, volume, host, thin=False, mirror_count=0):
+        """
+        migrate a volume
+        """
+
+        raise NotImplementedError("Migrate volume is only managed through Open vStorage, "
+                                  "because OpenStack has no knowledge of underlying storagerouters")
 
     def attach_volume(self, context, volume, instance_uuid, host_name,
                       mountpoint):
