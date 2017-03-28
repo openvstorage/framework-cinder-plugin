@@ -23,6 +23,7 @@ class VDiskRemover(object):
     LOGGER = LogHandler.get(source="remove", name="ci_vdisk_remover")
     REMOVE_SNAPSHOT_TIMEOUT = 60
     REMOVE_VTEMPLATE_TIMEOUT = 60
+    REMOVE_VDISK_TIMEOUT = 60
 
     def __init__(self):
         pass
@@ -61,3 +62,29 @@ class VDiskRemover(object):
             VDiskRemover.LOGGER.info("Deleting snapshot `{0}` for vdisk `{1}` should have succeeded"
                                      .format(snapshot['guid'], vdisk_name))
             return True
+
+    @staticmethod
+    def remove_vdisk(vdisk_name, vpool_guid, api, timeout=REMOVE_VDISK_TIMEOUT):
+        """
+        Remove a existing vdisk
+
+        :param vdisk_name: name of a existing vdisk
+        :type vdisk_name: str
+        :param vpool_guid: guid of a vpool
+        :type vpool_guid: str
+        :param api: specify a valid api connection to the setup
+        :type api: helpers.api.OVSClient
+        :param timeout: time to wait for the task to complete
+        :type timeout: int
+        :return:
+        """
+        vdisk_guid = VDiskHelper.get_vdisk_by_name(vdisk_name=vdisk_name, vpool_guid=vpool_guid, api=api)['guid']
+        task_guid = api.delete(api='/vdisks/{0}'.format(vdisk_guid))
+
+        result = api.wait_for_task(task_id=task_guid, timeout=timeout)
+
+        if result[0] is False:
+            errormsg = "Removal of vdisk '{0}' failed with '{1}'".format(vdisk_name, result[1])
+            VDiskRemover.LOGGER.error(errormsg)
+            raise RuntimeError(errormsg)
+        return result[0]
