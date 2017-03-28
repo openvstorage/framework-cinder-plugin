@@ -25,16 +25,16 @@ sudo find . -type d -exec touch {}/__init__.py \;
 cd /opt/
 sudo chown -R ovs-support:ovs-support OpenvStorage/
 """
-import sys
+import ctypes
+import errno
+import os
 import random
-import os, ctypes, errno
-from ctypes import cdll, CDLL
+import sys
+import time
 
 from oslo_config import cfg
 from oslo_log import log as logging
-import six
 
-from cinder import exception
 from cinder import utils
 from cinder.image import image_utils
 from cinder.volume import driver
@@ -48,6 +48,7 @@ from ci.api_lib.helpers.api import OVSClient
 from ci.api_lib.helpers.storagedriver import StoragedriverHelper
 from ci.api_lib.helpers.storagerouter import StoragerouterHelper
 from ci.api_lib.helpers.vdisk import VDiskHelper
+from ci.api_lib.remove.vdisk import VDiskRemover
 from ci.api_lib.setup.vdisk import VDiskSetup
 
 
@@ -76,9 +77,12 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
     """Open vStorage Edge Volume Driver plugin for Cinder."""
 
     VERSION = '0.0.1'
-    SNAPSHOT_CREATE_TIMEOUT = 120
+    VOL_CREATE_SLEEP = 5
     VOLUME_PREFIX = "volume-"
     SNAPSHOT_BACKUP_PREFIX = "backup-"
+    LOCAL_DIR = "/tmp/"
+    LOCAL_VOL_FORMAT = ".raw"
+    LOCAL_VOL_FORMAT_RAW = LOCAL_VOL_FORMAT.split('.')[1]
 
     def __init__(self, *args, **kwargs):
         """
@@ -186,27 +190,6 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
                                                                            self.password,
                                                                            self.port))
 
-    def _setup_ovsvolumedriver(self):
-        """
-        Sets up the ovsvolumedriver
-
-        :return: libovsvolumedriver
-        :rtype: libovsvolumedriver
-        """
-
-        ctx_attr = self.libovsvolumedriver.ovs_ctx_attr_new()
-
-        # fetch first time setup information
-        storagedriver = self._get_storagedriver_information()
-        edge_protocol = storagedriver['cluster_node_config']['network_server_uri'].split(':')[0]
-
-        self.libovsvolumedriver.ovs_ctx_attr_set_transport(ctx_attr, edge_protocol, storagedriver['storage_ip'],
-                                                           int(storagedriver['ports']['edge']))
-        LOG.debug('libovsvolumedriver.do_setup {0} {1} {2} {3}'.format(ctx_attr, edge_protocol,
-                                                                       storagedriver['storage_ip'],
-                                                                       storagedriver['ports']['edge']))
-        return self.libovsvolumedriver, self.libovsvolumedriver.ovs_ctx_new(ctx_attr)
-
     # Volume operations
     def initialize_connection(self, volume, connector):
         """Allow connection to connector and return connection info."""
@@ -228,7 +211,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         location = self._get_volume_location(volume_name)
         out = self._run_qemu_img('create', location, '{0}G'.format(volume.size))
         LOG.debug('libovsvolumedriver.ovs_create_volume: {0} {1} {2}'.format(volume.id, volume.size, out))
-
+        time.sleep(self.VOL_CREATE_SLEEP)
         if out == -1:
            raise OSError(errno.errorcode[ctypes.get_errno()])
 
@@ -243,35 +226,32 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         :param volume: volume reference (sqlalchemy Model)
         """
         volume_name = self.VOLUME_PREFIX + str(volume.id)
-        libovsvolumedriver, ctx = self._setup_ovsvolumedriver()
-        out = libovsvolumedriver.ovs_remove_volume(ctx, volume_name)
-        LOG.debug('libovsvolumedriver.ovs_remove_volume: {0} {1} > {2}'.format(ctx, volume, out))
-        if out == -1:
-            errno = ctypes.get_errno()
-            raise OSError(errno.errorcode[errno])
+        api = self._setup_ovs_client()
+        VDiskRemover.remove_vdisk(vdisk_name=volume_name, vpool_guid=self.vpool_guid, api=api)
+        LOG.debug('libovsvolumedriver.delete_volume: {0}'.format(volume.id))
 
     def create_snapshot(self, snapshot):
-        """Creates a snapshot."""
+        """
+        Creates a snapshot
 
-        location = self._get_volume_location(snapshot['volume_name'])
-        out = self._run_qemu_img('snapshot', location, '-c', snapshot['name'])
-        LOG.debug('libovsvolumedriver.ovs_snapshot_create: {0} {1} {2}'.format(str(snapshot['volume_name']),
-                                                                               str(snapshot['name']), out))
-        if out == -1:
-            errno = ctypes.get_errno()
-            raise OSError(errno.errorcode[errno])
+        will always be marked as inconsistent
+        """
+        volume_name = self.VOLUME_PREFIX + snapshot['volume_id']
+        api = self._setup_ovs_client()
+        VDiskSetup.create_snapshot(snapshot_name=snapshot['name'], vdisk_name=volume_name,
+                                   vpool_guid=self.vpool_guid, api=api, consistent=False, sticky=True)
+
+        LOG.debug('libovsvolumedriver.ovs_snapshot_create: {0} {1}'.format(volume_name, str(snapshot['name'])))
 
     def delete_snapshot(self, snapshot):
-        """Deletes a snapshot."""
+        """
+        Deletes a snapshot.
+        """
+        volume_name = self.VOLUME_PREFIX + snapshot['volume_id']
+        api = self._setup_ovs_client()
+        VDiskRemover.remove_snapshot(snapshot_name=snapshot['name'], vpool_guid=self.vpool_guid, api=api)
 
-        location = self._get_volume_location(snapshot['volume_name'])
-        out = self._run_qemu_img('snapshot', location, '-d', snapshot['name'])
-        LOG.debug('libovsvolumedriver.ovs_snapshot_remove: {0} {1} {2}'.format(str(snapshot['volume_name']),
-                                                                               str(snapshot['name']), out))
-
-        if out == -1:
-            errno = ctypes.get_errno()
-            raise OSError(errno.errorcode[errno])
+        LOG.debug('libovsvolumedriver.ovs_snapshot_remove: {0} {1}'.format(volume_name, snapshot['name']))
 
     def backup_volume(self, context, backup, backup_service):
         """
@@ -352,7 +332,6 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         """
 
         new_volume_name = self.VOLUME_PREFIX + str(volume.id)
-        LOG.debug('libovsvolumedriver.ovs_clone_from_snapshot {0} '.format(volume.id))
 
         api = self._setup_ovs_client()
         # pick a random storagerouter to deploy the new clone on
@@ -366,6 +345,8 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
                                                             vpool_guid=self.vpool_guid, api=api)['storage_ip']
         location = self._get_volume_location(volume_name=new_volume_name, storage_ip=storage_ip)
         volume['provider_location'] = location
+
+        LOG.debug('libovsvolumedriver.ovs_clone_from_snapshot {0} '.format(volume.id))
         return {'provider_location': volume['provider_location']}
 
         # @TODO: if a new size is given we should trigger extend volume
@@ -388,7 +369,40 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         if not os.path.exists(image_path):
             image_utils.fetch_to_raw(context, image_service, image_id, image_path, '1M', size=volume['size'])
         self._run_qemu_img('convert', '-n', '-O', 'raw', image_path, location)
+
         LOG.debug('libovsvolumedriver.ovs_copy_image_to_volume {0} {1}'.format(volume.id, image_id))
+
+    def copy_volume_to_image(self, context, volume, image_service, image_meta):
+        """
+        Copy the volume to the specified image.
+
+        WARNING: if you copy a volume to a image of 1 TB. Make sure you have 1 TB local space!
+        """
+
+        # download volume to local directory
+        volume_name = self.VOLUME_PREFIX + str(volume.id)
+        location = self._get_volume_location(volume_name=volume_name)
+        local_path = self.local_path(volume)
+        self._run_qemu_img('convert', location, local_path, '-O', self.LOCAL_VOL_FORMAT_RAW)
+
+        # upload to image_service
+        image_utils.upload_volume(context, image_service, image_meta, local_path)
+
+        # remove local volume
+
+        LOG.debug('libovsvolumedriver.ovs_copy_volume_to_image {0} '.format(volume.id))
+
+    def local_path(self, volume):
+        """
+        Generate a local path of a volume
+
+        :param volume: volume reference (sqlalchemy Model)
+        :return: path
+        :rtype: str
+        """
+
+        LOG.debug('libovsvolumedriver.ovs_local_path {0} '.format(volume.id))
+        return self.LOCAL_DIR + self.VOLUME_PREFIX + volume.id + self.LOCAL_VOL_FORMAT
 
     def extend_volume(self, volume, size_gb):
         """
