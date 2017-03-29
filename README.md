@@ -6,6 +6,3 @@ The Open vStorage OpenStack Cinder Plugin is released under the [Apache 2.0 Lice
 
 ## Supported OpenStack releases
 * [Newton](edge/newton/guide.md)
-
-## Documentation
-Documentation on how to use OpenStack Cinder Plugin with Open vStorage can be found [here](https://openvstorage.gitbooks.io/cinder/content/).
