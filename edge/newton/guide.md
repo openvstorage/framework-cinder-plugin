@@ -19,10 +19,20 @@ The edge client is provided by the following packages of Open vStorage:
 It is used for the following features: 
 * Copy image to volume
 * Copy volume to image
+* Create empty volume
+* Extending a existing volume
 
 ### The automation library
 
 The automation library that contacts Open vStorage via URI approach is provided in this repo.
+
+It is used for the following features:
+* Create empty volume
+* Create volume from existing volume
+* Create snapshot from volume
+* Create volume from snapshot
+* Delete volume
+* Delete snapshot from volume
 
 ## Sources
 
