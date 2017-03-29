@@ -326,7 +326,7 @@ This file is present in the following locations:
 * `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/os_brick/initiator/connectors/openvstorage.py`
 * `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/os_brick/initiator/connectors/openvstorage.py`
 
-### Installing Open vStorage components on compute node
+### Installing Open vStorage components
 
 Remove all present `libvirt` & `qemu` packages:
 ```
