@@ -30,6 +30,7 @@ The automation library that contacts Open vStorage via URI approach is provided 
 
 It is used for the following features:
 * Create volume from existing volume
+* Create volume from volume
 * Create snapshot from volume
 * Create volume from snapshot
 * Delete volume
