@@ -1,4 +1,4 @@
-# Installing OpenStack via Ansible the ALL IN ONE way
+# Installing OpenvStorage in OpenStack
 
 ## Description
 This setup is a easy way to setup OpenStack on 1 VM in LXE containers.
