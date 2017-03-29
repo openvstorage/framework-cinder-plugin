@@ -415,8 +415,10 @@ Open vStorage nova driver: `/openstack/venvs/nova-14.1.1/lib/python2.7/site-pack
 
 Nova config file: `/etc/nova/nova.conf`
 
-**Remarks:** The openvstorage nova plugin, `config.py` & `driver.py` should be installed where: `nova-compute` is running
-
+**Remarks:** The openvstorage nova plugin, `driver.py` & `config.py` should be installed where:
+ * `nova-compute` is running
+ *  on the nova node where the vPool is defined in cinder
+ 
 ### Installing the nova driver
 
 Install the following nova driver in Open Stack: `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/nova/virt/libvirt/volume/openvstorage_edge.py`
