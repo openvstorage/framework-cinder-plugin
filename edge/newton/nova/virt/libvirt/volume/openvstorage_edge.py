@@ -40,7 +40,6 @@ class LibvirtOpenvStorageEdgeVolumeDriver(LibvirtVolumeDriver):
 
     def __init__(self, connection):
         super(LibvirtOpenvStorageEdgeVolumeDriver, self).__init__(connection)
-        self.connector = connector.InitiatorConnector.factory('OPENVSTORAGE_EDGE', utils.get_root_helper())
         LOG.debug("libovsvolumedriver.init")
 
     def get_config(self, connection_info, disk_info):

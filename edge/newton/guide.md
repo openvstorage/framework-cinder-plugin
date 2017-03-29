@@ -2,10 +2,28 @@
 
 ## Description
 This setup is a easy way to setup OpenStack on 1 VM in LXE containers.
-This walkthrough is mainly focussing on OpenStack but in `Remarks` section, you can find all the directories for DevStack.
+This walkthrough is mainly focusing on OpenStack but in `DevStack Virtual machine details` section, you can find all the directories for DevStack.
 
 Before we begin, I want to mention that the directories that are present in this document can differ with the reality as every openstack distribution is different. 
 Nevertheless once you get a hold of it, the main directories do not differ that much.
+
+## Architectural overview
+
+![](../../docs/ovs_os_architecture_newton.png)
+
+### The edge client
+
+The edge client is provided by the following packages of Open vStorage:
+* qemu
+* libvirt-bin
+
+It is used for the following features: 
+* Copy image to volume
+* Copy volume to image
+
+### The automation library
+
+The automation library that contacts Open vStorage via URI approach is provided in this repo.
 
 ## Sources
 
@@ -19,11 +37,9 @@ https://docs.openstack.org/project-deploy-guide/openstack-ansible/ocata/verify-o
 
 https://github.com/openstack-dev/devstack
 
-Inside sources:
+https://github.com/openstack/cinder/blob/master/cinder/volume/drivers/lvm.py
 
-https://github.com/openvstorage/framework-cinder-plugin/tree/ovs-23-cinder-cleanup
-
-http://confluence.openvstorage.com/display/~kvanhijf/Install+OpenStack
+https://github.com/openstack/nova/blob/master/nova/virt/libvirt/storage/lvm.py
 
 ## Setups
 
@@ -38,6 +54,38 @@ http://confluence.openvstorage.com/display/~kvanhijf/Install+OpenStack
 * Users:
     * `root/rooter`
     * `ovs-support/rooter`
+    
+* Ready to go OpenStack `ocata` snapshot: `openstack`
+* Ready to go OpenStack `newton` snapshot: `openstack-newton` (and private key for user `root`)
+```
+-----BEGIN RSA PRIVATE KEY-----
+MIIEowIBAAKCAQEA2L/PKYssOqBNUfrOv/nOJjxzrLuFjD8u9kW72bnCbgu7hYsP
+7nXXhfWJ7xlaN/Mjn/xkfwuPpaqQ01FWJZxNgkpkymZq4zVUTY3W+DNNMdEDyPDm
+usV3V/rFwXQWOpgQrzeMD0cUwUMLHo+GWOhMj+1kdNw6tnbWZBkRuEVAkTMfhqub
+XjtjNV5U/OxL1nbcNTbwpT4tteUTMaiHa0xnPlMqzEe+g5RuQhjIfziJ+GpC169h
+UixBTdlOIKnNSJJ2LKPmmGaglBlLgzjMcfin2h6/Ln8DEoxhyTNof3r5JMIxvIEf
+p28bLZ8yHMVlVVrYR1fFSXK3DVAM8cQJMdHbHwIDAQABAoIBACUk4byN1BuL4xQ8
+dffiOFjHHU+ppx48qbCcjK+oLNCtBArDpQxJd5DGXkfyQUq7SQyetR4sfgZ273C3
+TJsPaRz94L3qxUCAoBzWRNOt/vmdhxeFaRTyyBv0prUbTr/l1V4hl8f6d20TLzGi
+iPRtgslbdk6sewdP4DexMB8zBviayFl4lN4CgSpUoJrwXIytgjyonqc48glz5OVl
+UBfo2JAS3kNbTho6Mld1hs8dz9fSRJz3yXEl0iRknavdk3wbXEySlDXMPxJENdRb
+Fdx4HV5qY7i3pAeliBIxuNEiRaTo9obVRkFx0i8FkgjyUqTD4bCObGLFh4F8wNyd
+KooJcNECgYEA+cG66eYdNq5mq42XVwb7wSU1rKRAngDEp1vRAEOdANDbSvRblVQF
+Rx5BrWW2u/mbEscNzoghjHByHsMhp4QAZqQvo4xd7gxaMgVy77+EcA+oVc1gP3O2
+SmQJ0Eipu3uJ6WHX13C7QvFpHydF8InwKjlwvsqouE/dzFdJa8PQbucCgYEA3ira
+nvJsGlGK+zUArPCfQk9gLEdjPV3ICm4Cns9nuY8xkeH2M90yjOxcz0WfRz7KKcS3
+w/Ud2M5jJiVFPS9AD6vbKMHCsygkTZAUFhpIC/f3CQydRuKFltfMaYkCu1fgeFFG
+Tuvp2i0gjiBR2svE+sTj+OfTcsLpNOEAzNBcwwkCgYB8KPcGuELloCWiOy11Mh+N
+kTXxsWX+Jluc52QrQXGXqjyaMogk4DQPetcjoGELabbRyuruNXaYHn5dFJxybojU
+feLA51L6uGFOZK8SyJ7KJr6EiSjD4n5I1Rqb1MOsVGnm/6ERlRVC3khoGFoIjko6
+c3u9HXpqxil5IBt720iPGQKBgG+UkFZyJM8XEzlVhnBVLXdtTD0Q4YvJlRV/6Pr/
+6fVtMJU3KqMjvia+82H6cqOiqoBN14moiwP/rBZVc6/mEkOMqbaPkgzO5WS7Lwtm
+ybaRJFY8KqWWUUfQPE7ozCFxYkCreSdcHwg/z/Dx1IqR+u2Dg4fYTv99Wwj+1JsJ
+Lv2ZAoGBAMAJlxH1vRUPwVT11lwJpiFtVJJNzktjsqdzOirUN+70rnniG27Bk+lo
+PytChCND4tpUY4nAyZl92wktTZ9+KgFGEJMvKjN4l3MnNKS5Dy3bosv+wWus9FD/
+jGirZrIq1IY1Z4QGA2u50MX4CIvPcF5qcwrzRSAMhSR0DLT6COIr
+-----END RSA PRIVATE KEY-----
+```
 
 ### DevStack Virtual machine details
 * Hypervisor: 10.100.199.50
@@ -55,7 +103,7 @@ I used DevStack to debug some driver issues. I strongly suggest to use DevStack 
 
 When I was installing DevStack, I encountered an error that has something to do with METADATA. I fixed it by installing the following package: `pip install requests[security]` and rerunning `./stack.sh` again. As seen here: https://github.com/ActiveState/appdirs/issues/89#issuecomment-285481179
 
-To install DevStack on `ovs-support@10.100.198.201` I used the following commands:
+To install DevStack on `ovs-support@10.100.198.201`, I used the following commands: (To access DevStack, you will have to use user `ovs-support` NOT `root`)
 ```
 git clone https://github.com/openstack-dev/devstack.git
 cd devstack
@@ -80,16 +128,16 @@ Nova libvirt config location: `/opt/stack/nova/nova/virt/libvirt/config.py`
 
 ## What did I test?
 
-* Ocata: the cinder driver is working correctly but the nova driver has issues as ocata requires a minimum of libvirt-bin version 2.2.0. And mine was only 1.3.1 at 17/03/2017
-* Newton: the cinder driver is working correctly, nova is still being tested but it should because we only need libvirt-bin 1.3.1 - 1.3.3
+* **Ocata:** the cinder driver is working correctly but the nova driver has issues as ocata requires a minimum of libvirt-bin version 2.2.0. And mine was only 1.3.1 at 17/03/2017
+* **Newton:** the cinder driver is working correctly, nova is still being tested but it should because we only need libvirt-bin 1.3.1 - 1.3.3
 
-## Install OpenStack
+## Installing & managing OpenStack
 
 ```
 sudo apt-get dist-upgrade
 sudo reboot
 
-sudo apt-get install ansible -y
+sudo apt-get install ansible -y # mine was 2.0.0.2-2ubuntu1
 
 git clone https://git.openstack.org/openstack/openstack-ansible /opt/openstack-ansible
 cd /opt/openstack-ansible
@@ -125,7 +173,7 @@ If you ever have any questions please join the community conversation on IRC at
 #openstack-ansible on freenode.
 ```
 
-## Accessing horizon
+### Accessing horizon
 
 Search for the horizon LXE container: `lxc-ls -f`
 
@@ -152,20 +200,20 @@ Edit the following file: `/etc/horizon/local_settings.py` & comment the followin
 
 Restart apache2: `systemctl restart apache2`
 
-## Orchestration through GUI
+### Orchestration through GUI
 
 Logout from horizon dashboard and perform these command FROM the deployment node: 
 
 Search the admin password to login to horizon: `grep keystone_auth_admin_password /etc/openstack_deploy/user_secrets.yml`
 
-setup ssh tunneling to access horizon: `sudo ssh -L 8100:172.29.237.193:80 root@10.100.198.200 -i ~/.ssh/id_rsa`
+* go with your browser to: `10.100.198.200`
+* or setup ssh tunneling to access horizon: `sudo ssh -L 8100:172.29.237.193:80 root@10.100.198.200 -i ~/.ssh/id_rsa` and go with your browser to `10.100.198.200:8100`
 
-Go with your browser to: `10.100.198.200:8100`
 login into horizon with user `admin` & the `keystone_auth_admin_password`
 
-## Orchestration through CLi
+### Orchestration through CLi
 
-There is 1 LXE container that can orchestrate everything in OpenStack.
+There is 1 LXE container that can orchestrate everything in OpenStack: `lxc-ls -f | grep utility`
 
 `aio1_utility_container-945241a4 RUNNING 1 onboot, openstack 10.255.255.64, 172.29.239.17`
 
@@ -198,8 +246,8 @@ root@aio1-utility-container-945241a4:~# openstack user list
 
 ## Installing the Open vStorage cinder driver
 
-Cinder driver directory: `/openstack/venvs/cinder-15.0.0/lib/python2.7/site-packages/cinder/volume/drivers/`
-Open vStorage cinder driver: `/openstack/venvs/cinder-15.0.0/lib/python2.7/site-packages/cinder/volume/drivers/openvstorage_edge.py`
+Cinder driver directory: `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/cinder/volume/drivers/`
+Open vStorage cinder driver: `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/cinder/volume/drivers/openvstorage_edge.py`
 Cinder config file: `/etc/cinder/cinder.conf`
 
 **Remarks:** The openvstorage cinder plugin & connectors should be installed where:
@@ -217,250 +265,37 @@ enabled_backends=myvpool01
 [myvpool01]
 volume_backend_name = myvpool01
 volume_driver = cinder.volume.drivers.openvstorage_edge.OpenvStorageEdgeVolumeDriver
-storage_ip = 10.100.199.191
-edge_port = 26203
-edge_protocol = tcp
-xml_rpc_port = 26201
+management_ips = 10.100.199.191,10.100.199.192,10.100.199.193
 vpool_guid = 7968a798-a0ab-4f6a-8f3d-32f785215307
+username = admin
+password = admin
+port = 443
 ```
 
 | Options | Type | Examples |
 | ------------- |:-------------:| :-----:|
 | enabled_backends | list seperated by commas | lvm,myvpool01,myvpool02 |
 | volume_backend_name | vpool_name | must be the same as in `enabled_backends` and as between brackets |
-| volume_driver | string | must always be `cinder.volume.drivers.openvstorage.OpenvStorageEdgeBaseVD` |
-| storage_ip | ip address | storage ip of a storagedriver that belongs to the vpool, this storagedriver will be used to deploy the volumes on via Open Stack |
-| edge_port | port | edge port of a storagedriver |
-| edge_protocol | protocol | tcp or rdma |
-| xml_rpc_port | port | xml_rpc communication port with the storagedriver |
-| vpool_guid | ovs guid | guid of the vpool in openvstorage |
+| volume_driver | string | must always be `cinder.volume.drivers.openvstorage.OpenvStorageEdgeVolumeDriver` |
+| management_ips | list seperated by commas | these ip addresses must be the Open vStorage master nodes |
+| vpool_guid | string | guid of the vpool in openvstorage |
+| username | string | username to login into Open vStorage |
+| password | string | password to login into Open vStorage |
+| port | int | port to login into Open vStorage (80 or 443) |
 
-After adding this config to `/etc/cinder/cinder.conf` add the `openvstorage_edge.py` cinder driver to `/openstack/venvs/cinder-15.0.0/lib/python2.7/site-packages/cinder/volume/drivers/openvstorage_edge.py`
-
-```
-# Copyright 2016 iNuron NV
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-"""
-OpenStack Cinder driver - interface to Open vStorage Edge
-- uses qemu-img calls (requires libovsvolumedriver, qemu, libvirt-bin packages from openvstorage repo)
-- uses libovsvolumedriver calls where needed
-"""
-import os, ctypes, errno
-from ctypes import cdll, CDLL
-
-from oslo_config import cfg
-from oslo_log import log as logging
-import six
-
-from cinder import exception
-from cinder import utils
-from cinder.image import image_utils
-from cinder.volume import driver
-
-
-LOG = logging.getLogger(__name__)
-OPTS = [cfg.StrOpt('storage_ip',
-                   default = '',
-                   help = 'IP address of first storage node'),
-        cfg.StrOpt('edge_port',
-                   default = '26203',
-                   help = 'PORT of the edge server'),
-        cfg.StrOpt('edge_protocol',
-                   default = 'tcp',
-                   help = 'Protocol to use - edge client')]
-
-CONF = cfg.CONF
-CONF.register_opts(OPTS)
-
-
-class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
-    """Open vStorage Edge Volume Driver plugin for Cinder."""
-    VERSION = '0.0.1'
-
-    def __init__(self, *args, **kwargs):
-        """Init: args, kwargs pass through;
-
-        Options come from CONF
-        """
-        super(OpenvStorageEdgeVolumeDriver, self).__init__(*args, **kwargs)
-        LOG.debug('INIT %s %s %s %s %s', CONF.storage_ip, CONF.edge_port, CONF.edge_protocol, args, kwargs)
-        self.configuration.append_config_values(OPTS)
-        self.volume_backend_name = kwargs['host'].split('@')[1]
-
-    def _get_volume_location(self, volume_name):
-        """Return volume location."""
-        return 'openvstorage+{0}:{1}:{2}/{3}'.format(self.configuration.edge_protocol,
-                                                     self.configuration.storage_ip,
-                                                     self.configuration.edge_port,
-                                                     volume_name)
-
-    def _run_qemu_img(self, command, *params):
-        """Executes qemu-img command wrapper."""
-        cmd = ['env', 'LC_ALL=C', 'LANG=C', 'qemu-img', command] + list(params)
-        output = utils.execute(*cmd)
-        LOG.debug('Run: {0} Output: {1}'.format(cmd, output))
-        return output
-
-    def check_for_setup_error(self):
-        """Check for setup errors"""
-        pass
-
-    def do_setup(self, context):
-        """Any initialization the volume driver does while starting."""
-        cdll.LoadLibrary('libovsvolumedriver.so')
-        libovsvolumedriver = CDLL('libovsvolumedriver.so', use_errno=True)
-        ctx_attr = libovsvolumedriver.ovs_ctx_attr_new()
-        libovsvolumedriver.ovs_ctx_attr_set_transport(ctx_attr,
-                                                      self.configuration.edge_protocol,
-                                                      self.configuration.storage_ip,
-                                                      int(self.configuration.edge_port))
-        self.ctx = libovsvolumedriver.ovs_ctx_new(ctx_attr)
-        LOG.debug('libovsvolumedriver do_setup: {0} {1} {2} {3} > {4}'.format(ctx_attr, self.configuration.edge_protocol, self.configuration.storage_ip, self.configuration.edge_port, self.ctx))
-        self.libovsvolumedriver = libovsvolumedriver
-
-    # Volume operations
-    def initialize_connection(self, volume, connector):
-        """Allow connection to connector and return connection info."""
-        _ = connector
-        return {'driver_volume_type': 'openvstorage_edge',
-                'volume_backend_name': self.volume_backend_name,
-                'data': {'device_path': volume.provider_location}}
-
-    def create_volume(self, volume):
-        """Creates a volume.
-
-        Called on "cinder create ..." or "nova volume-create ..."
-        :param volume: volume reference (sqlalchemy Model)
-        """
-        location = self._get_volume_location(volume.display_name)
-        #out = self.libovsvolumedriver.ovs_create_volume(self.ctx, str(volume.display_name), int(volume.size*1024**3))
-        out = self._run_qemu_img('create', location, '{0}G'.format(volume.size))
-        LOG.debug('libovsvolumedriver.ovs_create_volume: {0} {1} {2} > {3}'.format(self.ctx, volume.display_name, volume.size, out))
-        #if out == -1:
-        #    raise OSError(errno.errorcode[ctypes.get_errno()])
-
-        volume['provider_location'] = location
-        #self.extend_volume(volume, volume.size)
-        return {'provider_location': volume['provider_location']}
-
-    def delete_volume(self, volume):
-        """Deletes a logical volume.
-
-        Called on "cinder delete ... "
-        :param volume: volume reference (sqlalchemy Model)
-        """
-        out = self.libovsvolumedriver.ovs_remove_volume(self.ctx, str(volume.display_name))
-        LOG.debug('libovsvolumedriver.ovs_remove_volume: {0} {1} > {2}'.format(self.ctx, volume.display_name, out))
-        if out == -1:
-            errno = ctypes.get_errno()
-            if errno == 2:
-                return
-            raise OSError(errno.errorcode[errno])
-
-    def copy_image_to_volume(self, context, volume, image_service, image_id):
-        """Copy image to volume
-
-        Called on "nova volume-create --image-id ..."
-        or "cinder create --image-id"
-        Downloads image from glance server into volume
-        :param context: Context object
-        :param volume: volume reference (sqlalchemy Model)
-        :param image_service: image service reference
-        :param image_id: id of the image
-        """
-        #self.extend_volume(volume, volume.size)
-
-        location = self._get_volume_location(volume.display_name)
-        image_path = os.path.join('/tmp', image_id)
-        if not os.path.exists(image_path):
-            image_utils.fetch_to_raw(context,
-                                     image_service,
-                                     image_id,
-                                     image_path,
-                                     '1M',
-                                     size=volume['size'])
-        self._run_qemu_img('convert', '-n', '-O', 'raw', image_path, location)
-
-    def extend_volume(self, volume, size_gb):
-        """Extend volume to new size size_gb."""
-        if size_gb < volume.size:
-            raise RuntimeError('Cannot shrink volume.')
-        out = self.libovsvolumedriver.ovs_truncate_volume(self.ctx, str(volume.display_name), int(volume.size*1024**3))
-        LOG.debug('libovsvolumedriver.ovs_truncate_volume: {0} {1} {2} > {3}'.format(self.ctx, volume.display_name, volume.size, out))
-        if out == -1:
-            raise OSError(errno.errorcode[ctypes.get_errno()])
-
-    # Attach/detach volume to instance/host
-    def attach_volume(self, context, volume, instance_uuid, host_name,
-                      mountpoint):
-        """Callback for volume attached to instance or host."""
-        pass
-
-    def detach_volume(self, context, volume, attachment=None):
-        """Callback for volume detached."""
-        pass
-
-    def get_volume_stats(self, refresh=False):
-        """Get volumedriver stats
-
-        Refresh not implemented
-        """
-        _ = refresh
-        return {'volume_backend_name': self.volume_backend_name,
-                'vendor_name': 'Open vStorage',
-                'driver_version': self.VERSION,
-                'storage_protocol': 'openvstorage_edge',
-                'total_capacity_gb': 'unknown',
-                'free_capacity_gb': 'unknown',
-                'reserved_percentage': 0,
-                'QoS_support': False}
-
-
-    # Prevent NotImplementedError being raised
-    # Not actually implemented, these actions do not make sense for this driver
-    def create_export(self, context, volume, connector=None):
-        """Exports the volume."""
-        pass
-
-
-    def remove_export(self, context, volume):
-        """Removes an export for a volume."""
-        pass
-
-    def ensure_export(self, context, volume):
-        """Synchronously recreates an export for a volume."""
-        pass
-
-
-    def terminate_connection(self, volume, connector, force):
-        """Disallow connection from connector"""
-        pass
-```
+After adding this config to `/etc/cinder/cinder.conf` add the `openvstorage_edge.py` cinder driver to `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/cinder/volume/drivers/openvstorage_edge.py`
 
 ### Patching the connector.py & adding a openvstorage connector
 
 **IMPORTANT:** You will have to patch these files on the NOVA & CINDER part.
 
-Base directory for the CINDER files: `/openstack/venvs/cinder-15.0.0/lib/python2.7/site-packages/os_brick/initiator/`
+Base directory for the CINDER files: `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/os_brick/initiator/`
 Base directory for the NOVA files: `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/os_brick/initiator/`
-
 
 #### Connector.py
 
 This file is present in the following locations: 
-* `/openstack/venvs/cinder-15.0.0/lib/python2.7/site-packages/os_brick/initiator/connector.py`
+* `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/os_brick/initiator/connector.py`
 * `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/os_brick/initiator/connector.py`
 
 We have to edit the following lines:
@@ -484,426 +319,13 @@ elif protocol == OPENVSTORAGE_EDGE:
                                      *args, **kwargs)
 ```
 
-My `connector.py` looks like this:
-```
-# Copyright 2013 OpenStack Foundation.
-# All Rights Reserved.
-#
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
-#
-#         http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
-"""Brick Connector objects for each supported transport protocol.
-
-.. module: connector
-
-The connectors here are responsible for discovering and removing volumes for
-each of the supported transport protocols.
-"""
-
-import platform
-import re
-import socket
-import sys
-
-from oslo_concurrency import lockutils
-from oslo_log import log as logging
-from oslo_utils import importutils
-
-from os_brick import exception
-from os_brick.i18n import _
-from os_brick import initiator
-from os_brick import utils
-
-LOG = logging.getLogger(__name__)
-
-synchronized = lockutils.synchronized_with_prefix('os-brick-')
-
-# These constants are being deprecated and moving to the init file.
-# Please use the constants there instead.
-
-DEVICE_SCAN_ATTEMPTS_DEFAULT = 3
-MULTIPATH_ERROR_REGEX = re.compile("\w{3} \d+ \d\d:\d\d:\d\d \|.*$")
-MULTIPATH_DEV_CHECK_REGEX = re.compile("\s+dm-\d+\s+")
-MULTIPATH_PATH_CHECK_REGEX = re.compile("\s+\d+:\d+:\d+:\d+\s+")
-
-PLATFORM_ALL = 'ALL'
-PLATFORM_x86 = 'X86'
-PLATFORM_S390 = 'S390'
-OS_TYPE_ALL = 'ALL'
-OS_TYPE_LINUX = 'LINUX'
-OS_TYPE_WINDOWS = 'WIN'
-
-S390X = "s390x"
-S390 = "s390"
-
-ISCSI = "ISCSI"
-ISER = "ISER"
-FIBRE_CHANNEL = "FIBRE_CHANNEL"
-AOE = "AOE"
-DRBD = "DRBD"
-NFS = "NFS"
-GLUSTERFS = "GLUSTERFS"
-LOCAL = "LOCAL"
-GPFS = "GPFS"
-HUAWEISDSHYPERVISOR = "HUAWEISDSHYPERVISOR"
-HGST = "HGST"
-RBD = "RBD"
-SCALEIO = "SCALEIO"
-SCALITY = "SCALITY"
-QUOBYTE = "QUOBYTE"
-DISCO = "DISCO"
-VZSTORAGE = "VZSTORAGE"
-SHEEPDOG = "SHEEPDOG"
-OPENVSTORAGE_EDGE = "OPENVSTORAGE_EDGE"
-
-# List of connectors to call when getting
-# the connector properties for a host
-connector_list = [
-    'os_brick.initiator.connectors.base.BaseLinuxConnector',
-    'os_brick.initiator.connectors.iscsi.ISCSIConnector',
-    'os_brick.initiator.connectors.fibre_channel.FibreChannelConnector',
-    ('os_brick.initiator.connectors.fibre_channel_s390x.'
-     'FibreChannelConnectorS390X'),
-    'os_brick.initiator.connectors.aoe.AoEConnector',
-    'os_brick.initiator.connectors.remotefs.RemoteFsConnector',
-    'os_brick.initiator.connectors.rbd.RBDConnector',
-    'os_brick.initiator.connectors.local.LocalConnector',
-    'os_brick.initiator.connectors.gpfs.GPFSConnector',
-    'os_brick.initiator.connectors.drbd.DRBDConnector',
-    'os_brick.initiator.connectors.huawei.HuaweiStorHyperConnector',
-    'os_brick.initiator.connectors.hgst.HGSTConnector',
-    'os_brick.initiator.connectors.scaleio.ScaleIOConnector',
-    'os_brick.initiator.connectors.disco.DISCOConnector',
-    'os_brick.initiator.connectors.vmware.VmdkConnector',
-    'os_brick.initiator.windows.base.BaseWindowsConnector',
-    'os_brick.initiator.windows.iscsi.WindowsISCSIConnector',
-    'os_brick.initiator.windows.fibre_channel.WindowsFCConnector',
-    'os_brick.initiator.windows.smbfs.WindowsSMBFSConnector',
-    'os_brick.initiator.connectors.openvstorage.OpenvStorageEdgeConnector',
-]
-
-# Mappings used to determine who to contruct in the factory
-_connector_mapping_linux = {
-    initiator.AOE:
-        'os_brick.initiator.connectors.aoe.AoEConnector',
-    initiator.DRBD:
-        'os_brick.initiator.connectors.drbd.DRBDConnector',
-
-    initiator.GLUSTERFS:
-        'os_brick.initiator.connectors.remotefs.RemoteFsConnector',
-    initiator.NFS:
-        'os_brick.initiator.connectors.remotefs.RemoteFsConnector',
-    initiator.SCALITY:
-        'os_brick.initiator.connectors.remotefs.RemoteFsConnector',
-    initiator.QUOBYTE:
-        'os_brick.initiator.connectors.remotefs.RemoteFsConnector',
-    initiator.VZSTORAGE:
-        'os_brick.initiator.connectors.remotefs.RemoteFsConnector',
-
-    initiator.ISCSI:
-        'os_brick.initiator.connectors.iscsi.ISCSIConnector',
-    initiator.ISER:
-        'os_brick.initiator.connectors.iscsi.ISCSIConnector',
-    initiator.FIBRE_CHANNEL:
-        'os_brick.initiator.connectors.fibre_channel.FibreChannelConnector',
-
-    initiator.LOCAL:
-        'os_brick.initiator.connectors.local.LocalConnector',
-    initiator.HUAWEISDSHYPERVISOR:
-        'os_brick.initiator.connectors.huawei.HuaweiStorHyperConnector',
-    initiator.HGST:
-        'os_brick.initiator.connectors.hgst.HGSTConnector',
-    initiator.RBD:
-        'os_brick.initiator.connectors.rbd.RBDConnector',
-    initiator.SCALEIO:
-        'os_brick.initiator.connectors.scaleio.ScaleIOConnector',
-    initiator.DISCO:
-        'os_brick.initiator.connectors.disco.DISCOConnector',
-    initiator.SHEEPDOG:
-        'os_brick.initiator.connectors.sheepdog.SheepdogConnector',
-    initiator.VMDK:
-        'os_brick.initiator.connectors.vmware.VmdkConnector',
-    initiator.GPFS:
-        'os_brick.initiator.connectors.gpfs.GPFSConnector',
-
-}
-
-# Mapping for the S390X platform
-_connector_mapping_linux_s390x = {
-    initiator.FIBRE_CHANNEL:
-        'os_brick.initiator.connectors.fibre_channel_s390x.'
-        'FibreChannelConnectorS390X',
-    initiator.DRBD:
-        'os_brick.initiator.connectors.drbd.DRBDConnector',
-    initiator.NFS:
-        'os_brick.initiator.connectors.remotefs.RemoteFsConnector',
-    initiator.ISCSI:
-        'os_brick.initiator.connectors.iscsi.ISCSIConnector',
-    initiator.LOCAL:
-        'os_brick.initiator.connectors.local.LocalConnector',
-    initiator.RBD:
-        'os_brick.initiator.connectors.rbd.RBDConnector',
-    initiator.GPFS:
-        'os_brick.initiator.connectors.gpfs.GPFSConnector',
-}
-
-# Mapping for the windows connectors
-_connector_mapping_windows = {
-    initiator.ISCSI:
-        'os_brick.initiator.windows.iscsi.WindowsISCSIConnector',
-    initiator.FIBRE_CHANNEL:
-        'os_brick.initiator.windows.fibre_channel.WindowsFCConnector',
-    initiator.SMBFS:
-        'os_brick.initiator.windows.smbfs.WindowsSMBFSConnector',
-}
-
-
-# Create aliases to the old names until 2.0.0
-# TODO(smcginnis) Remove this lookup once unit test code is updated to
-# point to the correct location
-for item in connector_list:
-    _name = item.split('.')[-1]
-    globals()[_name] = importutils.import_class(item)
-
-
-@utils.trace
-def get_connector_properties(root_helper, my_ip, multipath, enforce_multipath,
-                             host=None, execute=None):
-    """Get the connection properties for all protocols.
-
-    When the connector wants to use multipath, multipath=True should be
-    specified. If enforce_multipath=True is specified too, an exception is
-    thrown when multipathd is not running. Otherwise, it falls back to
-    multipath=False and only the first path shown up is used.
-    For the compatibility reason, even if multipath=False is specified,
-    some cinder storage drivers may export the target for multipath, which
-    can be found via sendtargets discovery.
-
-    :param root_helper: The command prefix for executing as root.
-    :type root_helper: str
-    :param my_ip: The IP address of the local host.
-    :type my_ip: str
-    :param multipath: Enable multipath?
-    :type multipath: bool
-    :param enforce_multipath: Should we enforce that the multipath daemon is
-                              running?  If the daemon isn't running then the
-                              return dict will have multipath as False.
-    :type enforce_multipath: bool
-    :param host: hostname.
-    :param execute: execute helper.
-    :returns: dict containing all of the collected initiator values.
-    """
-    props = {}
-    props['platform'] = platform.machine()
-    props['os_type'] = sys.platform
-    props['ip'] = my_ip
-    props['host'] = host if host else socket.gethostname()
-
-    for item in connector_list:
-        connector = importutils.import_class(item)
-
-        if (utils.platform_matches(props['platform'], connector.platform) and
-           utils.os_matches(props['os_type'], connector.os_type)):
-            props = utils.merge_dict(props,
-                                     connector.get_connector_properties(
-                                         root_helper,
-                                         host=host,
-                                         multipath=multipath,
-                                         enforce_multipath=enforce_multipath,
-                                         execute=execute))
-
-    return props
-
-
-# TODO(walter-boring) We have to keep this class defined here
-# so we don't break backwards compatibility
-class InitiatorConnector(object):
-
-    @staticmethod
-    def factory(protocol, root_helper, driver=None,
-                use_multipath=False,
-                device_scan_attempts=initiator.DEVICE_SCAN_ATTEMPTS_DEFAULT,
-                arch=None,
-                *args, **kwargs):
-        """Build a Connector object based upon protocol and architecture."""
-
-        # We do this instead of assigning it in the definition
-        # to help mocking for unit tests
-        if arch is None:
-            arch = platform.machine()
-
-        # Set the correct mapping for imports
-        if sys.platform == 'win32':
-            _mapping = _connector_mapping_windows
-        elif arch in (initiator.S390, initiator.S390X):
-            _mapping = _connector_mapping_linux_s390x
-        else:
-            _mapping = _connector_mapping_linux
-
-        LOG.debug("Factory for %(protocol)s on %(arch)s",
-                  {'protocol': protocol, 'arch': arch})
-        protocol = protocol.upper()
-
-        # set any special kwargs needed by connectors
-        if protocol in (initiator.NFS, initiator.GLUSTERFS,
-                        initiator.SCALITY, initiator.QUOBYTE,
-                        initiator.VZSTORAGE):
-            kwargs.update({'mount_type': protocol.lower()})
-        elif protocol == initiator.ISER:
-            kwargs.update({'transport': 'iser'})
-        elif protocol == OPENVSTORAGE_EDGE:
-            return OpenvStorageEdgeConnector(root_helper=root_helper,
-                                             driver=driver,
-                                             device_scan_attempts=device_scan_attempts,
-                                             *args, **kwargs)
-
-        # now set all the default kwargs
-        kwargs.update(
-            {'root_helper': root_helper,
-             'driver': driver,
-             'use_multipath': use_multipath,
-             'device_scan_attempts': device_scan_attempts,
-             })
-
-        connector = _mapping.get(protocol)
-        if not connector:
-            msg = (_("Invalid InitiatorConnector protocol "
-                     "specified %(protocol)s") %
-                   dict(protocol=protocol))
-            raise exception.InvalidConnectorProtocol(msg)
-
-        conn_cls = importutils.import_class(connector)
-        return conn_cls(*args, **kwargs)
-
-```
-
 #### Connectors/openvstorage.py
 
 This file is present in the following locations: 
-* `/openstack/venvs/cinder-15.0.0/lib/python2.7/site-packages/os_brick/initiator/connectors/openvstorage.py`
+* `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/os_brick/initiator/connectors/openvstorage.py`
 * `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/os_brick/initiator/connectors/openvstorage.py`
 
-```
-from oslo_log import log as logging
-from oslo_utils import fileutils
-
-from os_brick.initiator import initiator_connector
-
-LOG = logging.getLogger(__name__)
-DEVICE_SCAN_ATTEMPTS_DEFAULT = 3
-
-
-class OpenvStorageEdgeConnector(initiator_connector.InitiatorConnector):
-    def __init__(self, root_helper, driver=None, execute=None,
-                 device_scan_attempts=DEVICE_SCAN_ATTEMPTS_DEFAULT,
-                 *args, **kwargs):
-        super(OpenvStorageEdgeConnector, self).__init__(root_helper, execute=execute,
-                                                       *args, **kwargs)
-
-    @staticmethod
-    def get_connector_properties(root_helper, *args, **kwargs):
-        """The generic connector properties."""
-        return {}
-
-    def check_valid_device(self, path, run_as_root=True):
-        """Test to see if the device path is a real device.
-        :param path: The file system path for the device.
-        :type path: str
-        :param run_as_root: run the tests as root user?
-        :type run_as_root: bool
-        :returns: bool
-        """
-        LOG.debug('OVSEdgeConnector check_valid_device {0}'.format(path))
-
-    def connect_volume(self, connection_properties):
-        """Connect to a volume.
-        The connection_properties describes the information needed by
-        the specific protocol to use to make the connection.
-        The connection_properties is a dictionary that describes the target
-        volume.  It varies slightly by protocol type (iscsi, fibre_channel),
-        but the structure is usually the same.
-        :param connection_properties: The dictionary that describes all
-                                      of the target volume attributes.
-        :type connection_properties: dict
-        :returns: dict
-        """
-        LOG.debug('OVSEdgeConnector connect_volume {0}'.format(connection_properties))
-        device_info = {'type': 'openvstorage_edge',
-                       'path': connection_properties['device_path']}
-
-        return device_info
-
-    def disconnect_volume(self, connection_properties, device_info):
-        """Disconnect a volume from the local host.
-        The connection_properties are the same as from connect_volume.
-        The device_info is returned from connect_volume.
-        :param connection_properties: The dictionary that describes all
-                                      of the target volume attributes.
-        :type connection_properties: dict
-        :param device_info: historical difference, but same as connection_props
-        :type device_info: dict
-        """
-        LOG.debug('OVSEdgeConnector disconnect_volume {0} {1}'.format(connection_properties, device_info))
-
-    def get_volume_paths(self, connection_properties):
-        """Return the list of existing paths for a volume.
-        The job of this method is to find out what paths in
-        the system are associated with a volume as described
-        by the connection_properties.
-        :param connection_properties: The dictionary that describes all
-                                      of the target volume attributes.
-        :type connection_properties: dict
-        """
-        LOG.debug('OVSEdgeConnector get_volume_paths {0}'.format(connection_properties))
-        path = connection_properties['device_path']
-        return [path]
-
-    def get_search_path(self):
-        """Return the directory where a Connector looks for volumes.
-        Some Connectors need the information in the
-        connection_properties to determine the search path.
-        """
-        LOG.debug('OVSEdgeConnector get_search_path > returning None')
-        return None
-
-    def extend_volume(self, connection_properties):
-        """Update the attached volume's size.
-        This method will attempt to update the local hosts's
-        volume after the volume has been extended on the remote
-        system.  The new volume size in bytes will be returned.
-        If there is a failure to update, then None will be returned.
-        :param connection_properties: The volume connection properties.
-        :returns: new size of the volume.
-        """
-        LOG.debug('OVSEdgeConnector extend_volume {0}'.format(connection_properties))
-
-    def get_all_available_volumes(self, connection_properties=None):
-        """Return all volumes that exist in the search directory.
-        At connect_volume time, a Connector looks in a specific
-        directory to discover a volume's paths showing up.
-        This method's job is to return all paths in the directory
-        that connect_volume uses to find a volume.
-        This method is used in coordination with get_volume_paths()
-        to verify that volumes have gone away after disconnect_volume
-        has been called.
-        :param connection_properties: The dictionary that describes all
-                                      of the target volume attributes.
-        :type connection_properties: dict
-        """
-        LOG.debug('OVSEdgeConnector get_all_available_volumes {0}'.format(connection_properties))
-        return []
-
-```
-
-### Installing Open vStorage components
+### Installing Open vStorage components on compute node
 
 Remove all present `libvirt` & `qemu` packages:
 ```
@@ -930,13 +352,13 @@ Restart the following services on all cinder nodes:
 ```
 systemctl restart cinder-volume
 systemctl restart cinder-backup
-systemctl restart cinder-api
 ```
 
 In the cinder-volume logs you should see the cinder driver initializing in the cinder volume manager:
 ```
-root@osa-aio-ctrl:~# grep INIT /var/log/cinder/cinder-volume.log 
-2017-03-17 12:56:52.554 14860 DEBUG cinder.volume.drivers.openvstorage_edge [req-1c0916ad-1b4e-4c75-911c-4efc7cb82ced - - - - -] INIT  26203 tcp () {'is_vol_db_empty': False, 'db': <module 'cinder.db' from '/openstack/venvs/cinder-15.0.0/lib/python2.7/site-packages/cinder/db/__init__.pyc'>, 'cluster_name': None, 'host': 'osa-aio-ctrl@myvpool01', 'active_backend_id': None, 'configuration': <cinder.volume.configuration.Configuration object at 0x7ffbcbad6750>} __init__ /openstack/venvs/cinder-15.0.0/lib/python2.7/site-packages/cinder/volume/drivers/openvstorage_edge.py:58
+root@osa-aio-ctrl:~# grep "libovsvolumedriver.init\|libovsvolumedriver.do_setup" /var/log/cinder/cinder-volume.log
+2017-03-28 14:33:28.638 DEBUG cinder.volume.drivers.openvstorage_edge [req-ef7d53ee-68cc-4573-89b2-c51d1dae5856 None None] libovsvolumedriver.init from (pid=3059) __init__ /opt/stack/cinder/cinder/volume/drivers/openvstorage_edge.py:96
+2017-03-28 14:33:28.694 DEBUG cinder.volume.drivers.openvstorage_edge [req-abb3f01d-fda4-4d8c-9742-0805d4386f48 None None] libovsvolumedriver.do_setup 10.100.199.191,10.100.199.192,10.100.199.193 7968a798-a0ab-4f6a-8f3d-32f785215307 admin admin 443 from (pid=3079) do_setup /opt/stack/cinder/cinder/volume/drivers/openvstorage_edge.py:191
 ```
 
 ### Adding a new volume type to OpenStack
@@ -984,11 +406,11 @@ Now start creating a volume with `volume_type` of Open vStorage. (In this case i
 
 ## Installing the Open vStorage nova driver
 
-Nova driver location: `/openstack/venvs/nova-15.0.0/lib/python2.7/site-packages/nova/virt/libvirt/driver.py`
+Nova driver location: `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/nova/virt/libvirt/driver.py`
 
-Nova config location: `/openstack/venvs/nova-15.0.0/lib/python2.7/site-packages/nova/virt/libvirt/config.py`
+Nova config location: `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/nova/virt/libvirt/config.py`
 
-Open vStorage nova driver: `/openstack/venvs/nova-15.0.0/lib/python2.7/site-packages/nova/virt/libvirt/volume/openvstorage_edge.py`
+Open vStorage nova driver: `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/nova/virt/libvirt/volume/openvstorage_edge.py`
 
 Nova config file: `/etc/nova/nova.conf`
 
@@ -996,90 +418,13 @@ Nova config file: `/etc/nova/nova.conf`
 
 ### Installing the nova driver
 
-Install the following nova driver in Open Stack: `/openstack/venvs/nova-15.0.0/lib/python2.7/site-packages/nova/virt/libvirt/volume/openvstorage_edge.py`
-
-```
-# Copyright 2016 iNuron NV
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-"""
-OpenStack Nova driver - interface to Open vStorage Edge for qemu
-- requires qemu, libvirt-bin packages from openvstorage repo
-- see also config_PATCH
-"""
-
-from os_brick.initiator import connector
-from oslo_log import log as logging
-
-from nova import utils
-from nova.virt.libvirt.volume.volume import LibvirtVolumeDriver
-from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import utils as libvirt_utils
-
-LOG = logging.getLogger(__name__)
-
-
-class LibvirtOpenvStorageEdgeVolumeDriver(LibvirtVolumeDriver):
-    """
-    Class for volumes backed by OpenvStorage Edge
-    """
-    def __init__(self, connection):
-        super(LibvirtOpenvStorageEdgeVolumeDriver, self).__init__(connection)
-        self.connector = connector.InitiatorConnector.factory('OPENVSTORAGE_EDGE', utils.get_root_helper())
-
-    def get_config(self, connection_info, disk_info):
-        """Returns xml for libvirt."""
-        conf = vconfig.LibvirtConfigOpenvStorageEdgeGuestDisk()
-        conf.driver_name = libvirt_utils.pick_disk_driver_name(self.connection._host.get_version(),
-                                                               self.is_block_dev)
-
-        source_path = connection_info['data']['device_path']
-        #u'device_path': u'openvstorage+tcp:10.130.11.202:26203/volimage3'
-        ovs_proto, host, port_volume = source_path.split(':')
-        port, name = port_volume.split('/')
-        _, transport = ovs_proto.split('+')
-
-        conf.source_name = name
-        conf.source_host_name = host
-        conf.source_host_port = port
-        conf.source_host_transport = transport
-
-        conf.target_dev = disk_info['dev']
-        conf.target_bus = disk_info['bus']
-        conf.serial = connection_info.get('serial')
-
-        return conf
-
-    def connect_volume(self, connection_info, disk_info):
-        """Attach the volume to instance_name."""
-        LOG.debug("Calling os-brick to attach Volume")
-        device_info = self.connector.connect_volume(connection_info['data'])
-        LOG.debug("Attached volume %s", device_info)
-        connection_info['data']['device_path'] = device_info['path']
-
-    def disconnect_volume(self, connection_info, disk_dev):
-        """Detach the volume from instance_name."""
-        LOG.debug("Calling os-brick to detach Volume")
-        self.connector.disconnect_volume(connection_info['data'], None)
-        LOG.debug("Detached volume")
-```
+Install the following nova driver in Open Stack: `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/nova/virt/libvirt/volume/openvstorage_edge.py`
 
 ### Patching driver & config.py
 
 #### config.py
 
-Nova config location: `/openstack/venvs/nova-15.0.0/lib/python2.7/site-packages/nova/virt/libvirt/config.py`
+Nova config location: `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/nova/virt/libvirt/config.py`
 
 Add this on line 904
 
@@ -1160,8 +505,13 @@ class LibvirtConfigOpenvStorageEdgeGuestDisk(LibvirtConfigGuestDisk):
 
 #### driver.py
 
-Nova driver location: `/openstack/venvs/nova-15.0.0/lib/python2.7/site-packages/nova/virt/libvirt/driver.py`
+Nova driver location: `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/nova/virt/libvirt/driver.py`
 
 You should add a `libvirt_volume_driver` to the list called `openvstorage_edge=nova.virt.libvirt.volume.openvstorage_edge.LibvirtOpenvStorageEdgeVolumeDriver` on line 148
 
 Now restart the `nova-compute` services on all nova nodes: `systemctl restart nova-compute`
+
+Checking if everything properly started: `ovs-support@dsa-aio-ctrl:~$ grep libovsvolumedriver.init /var/log/nova/nova-compute.log`
+```
+2017-03-27 10:50:26.681 DEBUG nova.virt.libvirt.volume.openvstorage_edge [req-44bf8b60-2a8d-4740-ad8b-495ad8b7452d None None] libovsvolumedriver.init from (pid=25690) __init__ /opt/stack/nova/nova/virt/libvirt/volume/openvstorage_edge.py:44
+```

@@ -165,7 +165,22 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         """
         cmd = ['env', 'LC_ALL=C', 'LANG=C', 'qemu-img', command] + list(params)
         output = utils.execute(*cmd)
-        LOG.debug('Run: {0} Output: {1}'.format(cmd, output))
+        LOG.debug('libovsvolumedriver._run_qemu_img {0} {1}'.format(cmd, output))
+        return output
+
+    @staticmethod
+    def _remove_local_path(path):
+        """
+        Remove a file that is present on the local machine
+
+        :param path: absolute directory to a file (e.g. /tmp/file.raw)
+        :type path: str
+        :return:
+        """
+
+        cmd = ['rm', path]
+        output = utils.execute(*cmd)
+        LOG.debug('libovsvolumedriver._remove_local_path {0} {1}'.format(cmd, output))
         return output
 
     def check_for_setup_error(self):
@@ -389,6 +404,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         image_utils.upload_volume(context, image_service, image_meta, local_path)
 
         # remove local volume
+        self._remove_local_path(path=local_path)
 
         LOG.debug('libovsvolumedriver.ovs_copy_volume_to_image {0} '.format(volume.id))
 
