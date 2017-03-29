@@ -29,7 +29,6 @@ It is used for the following features:
 The automation library that contacts Open vStorage via URI approach is provided in this repo.
 
 It is used for the following features:
-* Create empty volume
 * Create volume from existing volume
 * Create snapshot from volume
 * Create volume from snapshot
