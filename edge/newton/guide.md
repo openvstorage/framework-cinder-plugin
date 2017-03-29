@@ -247,7 +247,9 @@ root@aio1-utility-container-945241a4:~# openstack user list
 ## Installing the Open vStorage cinder driver
 
 Cinder driver directory: `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/cinder/volume/drivers/`
+
 Open vStorage cinder driver: `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/cinder/volume/drivers/openvstorage_edge.py`
+
 Cinder config file: `/etc/cinder/cinder.conf`
 
 **Remarks:** The openvstorage cinder plugin & connectors should be installed where:
