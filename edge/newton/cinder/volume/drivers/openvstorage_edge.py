@@ -225,7 +225,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         volume_name = self.VOLUME_PREFIX + str(volume.id)
         location = self._get_volume_location(volume_name)
         out = self._run_qemu_img('create', location, '{0}G'.format(volume.size))
-        LOG.debug('libovsvolumedriver.ovs_create_volume: {0} {1} {2}'.format(volume.id, volume.size, out))
+        LOG.debug('libovsvolumedriver.ovs_create_volume: {0} {1} {2} {3}'.format(volume.id, volume.size, location, out))
         time.sleep(self.VOL_CREATE_SLEEP)
         if out == -1:
            raise OSError(errno.errorcode[ctypes.get_errno()])

@@ -544,3 +544,33 @@ Checking if everything properly started: `ovs-support@dsa-aio-ctrl:~$ grep libov
 ```
 2017-03-27 10:50:26.681 DEBUG nova.virt.libvirt.volume.openvstorage_edge [req-44bf8b60-2a8d-4740-ad8b-495ad8b7452d None None] libovsvolumedriver.init from (pid=25690) __init__ /opt/stack/nova/nova/virt/libvirt/volume/openvstorage_edge.py:44
 ```
+
+## Adding a image to glance
+
+Login into the utility LXE container and perform following commands
+
+```
+wget http://download.cirros-cloud.net/0.3.5/cirros-0.3.5-x86_64-disk.img
+root@aio1-utility-container-f7adfdd4:~# glance image-create --name cirros-img --visibility public --file cirros-0.3.5-x86_64-disk.img --container-format bare --disk-format qcow2
++------------------+--------------------------------------+
+| Property         | Value                                |
++------------------+--------------------------------------+
+| checksum         | c8c4bca1793ed3d398accff4212c97e1     |
+| container_format | bare                                 |
+| created_at       | 2017-03-29T13:32:46Z                 |
+| disk_format      | qcow2                                |
+| id               | 2da15b70-c441-4a69-9ad9-5cd7a6de5078 |
+| min_disk         | 0                                    |
+| min_ram          | 0                                    |
+| name             | cirros-img                           |
+| owner            | cd307d26efb544dc8581375828bf6936     |
+| protected        | False                                |
+| size             | 7779384                              |
+| status           | active                               |
+| tags             | []                                   |
+| updated_at       | 2017-03-29T13:32:47Z                 |
+| virtual_size     | None                                 |
+| visibility       | public                               |
++------------------+--------------------------------------+
+
+```
