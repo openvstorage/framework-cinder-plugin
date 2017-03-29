@@ -69,31 +69,31 @@ https://github.com/openstack/nova/blob/master/nova/virt/libvirt/storage/lvm.py
 * Ready to go OpenStack `newton` snapshot: `openstack-newton` (and private key for user `root`)
 ```
 -----BEGIN RSA PRIVATE KEY-----
-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
+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
 -----END RSA PRIVATE KEY-----
 ```
 
@@ -151,8 +151,8 @@ sudo apt-get install ansible -y # mine was 2.0.0.2-2ubuntu1
 
 git clone https://git.openstack.org/openstack/openstack-ansible /opt/openstack-ansible
 cd /opt/openstack-ansible
-git checkout -b 15.0.0  # ocata latest stable atm
-git checkout -b 14.1.1  # newton latest stable atm
+git checkout 15.0.0  # ocata latest stable atm
+git checkout 14.1.1  # newton latest stable atm
 
 ./scripts/bootstrap-ansible.sh
 
