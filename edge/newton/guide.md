@@ -6,6 +6,8 @@ This guide describes how to install OpenvStorage in OpenStack.
 Before we begin, I want to mention that the directories that are present in this document can differ with the reality as every openstack distribution is different. 
 Nevertheless once you get a hold of it, the main directories do not differ that much.
 
+https://github.com/openvstorage/framework-cinder-plugin/issues/17
+
 ## Architectural overview
 
 ![](../../docs/ovs_os_architecture_newton.png)
