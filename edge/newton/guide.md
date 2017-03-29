@@ -1,8 +1,7 @@
 # Installing OpenvStorage in OpenStack
 
 ## Description
-This setup is a easy way to setup OpenStack on 1 VM in LXE containers.
-This walkthrough is mainly focusing on OpenStack but in `DevStack Virtual machine details` section, you can find all the directories for DevStack.
+This guide describes how to install OpenvStorage in OpenStack.
 
 Before we begin, I want to mention that the directories that are present in this document can differ with the reality as every openstack distribution is different. 
 Nevertheless once you get a hold of it, the main directories do not differ that much.
@@ -43,7 +42,7 @@ https://github.com/openstack/nova/blob/master/nova/virt/libvirt/storage/lvm.py
 
 ## Setups
 
-### OpenStack Virtual machine details
+### OpenStack ALL IN ONE - Virtual machine details
 * Hypervisor: 10.100.199.50
 * IP address: 10.100.198.200
 * Horizon: 10.100.198.200:80
@@ -87,7 +86,7 @@ jGirZrIq1IY1Z4QGA2u50MX4CIvPcF5qcwrzRSAMhSR0DLT6COIr
 -----END RSA PRIVATE KEY-----
 ```
 
-### DevStack Virtual machine details
+### DevStack - Virtual machine details
 * Hypervisor: 10.100.199.50
 * IP address: 10.100.198.201
 * Horizon: 10.100.198.201:80
