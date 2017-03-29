@@ -358,12 +358,20 @@ EOF
 apt-get update
 
 apt-get install qemu libvirt-bin -y
+
+mkdir -p /opt/OpenvStorage/
+git clone https://github.com/openvstorage/framework-cinder-plugin.git /opt/OpenvStorage/
+cd /opt/OpenvStorage/
+git checkout ovs-23-cinder-cleanup  # IN THE FUTURE THIS CAN BE MASTER
+find . -type d -exec touch {}/__init__.py \;
+cd /opt/
+sudo chown -R cinder:cinder OpenvStorage/
 ```
 
 Restart the following services on all cinder nodes:
 ```
-systemctl restart cinder-volume
-systemctl restart cinder-backup
+systemctl restart cinder-volume; systemctl status cinder-volume
+systemctl restart cinder-backup; systemctl status cinder-backup
 ```
 
 In the cinder-volume logs you should see the cinder driver initializing in the cinder volume manager:
@@ -371,6 +379,13 @@ In the cinder-volume logs you should see the cinder driver initializing in the c
 root@osa-aio-ctrl:~# grep "libovsvolumedriver.init\|libovsvolumedriver.do_setup" /var/log/cinder/cinder-volume.log
 2017-03-28 14:33:28.638 DEBUG cinder.volume.drivers.openvstorage_edge [req-ef7d53ee-68cc-4573-89b2-c51d1dae5856 None None] libovsvolumedriver.init from (pid=3059) __init__ /opt/stack/cinder/cinder/volume/drivers/openvstorage_edge.py:96
 2017-03-28 14:33:28.694 DEBUG cinder.volume.drivers.openvstorage_edge [req-abb3f01d-fda4-4d8c-9742-0805d4386f48 None None] libovsvolumedriver.do_setup 10.100.199.191,10.100.199.192,10.100.199.193 7968a798-a0ab-4f6a-8f3d-32f785215307 admin admin 443 from (pid=3079) do_setup /opt/stack/cinder/cinder/volume/drivers/openvstorage_edge.py:191
+```
+
+If you cannot find the above logs, there is probably something wrong. You can debug it as so:
+```
+root@osa-aio-ctrl:~# grep openvstorage /var/log/cinder/cinder-volume.log 
+2017-03-29 15:13:04.112 30231 ERROR cinder.cmd.volume   File "/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/cinder/volume/drivers/openvstorage_edge.py", line 47, in <module>
+2017-03-29 15:13:04.186 30231 DEBUG oslo_service.service [req-2fc177f9-930d-4dd2-94f6-6fc416198c32 - - - - -] vmstor.volume_driver           = cinder.volume.drivers.openvstorage_edge.OpenvStorageEdgeVolumeDriver log_opt_values /openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/oslo_config/cfg.py:2626
 ```
 
 ### Adding a new volume type to OpenStack
@@ -523,7 +538,7 @@ Nova driver location: `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/
 
 You should add a `libvirt_volume_driver` to the list called `openvstorage_edge=nova.virt.libvirt.volume.openvstorage_edge.LibvirtOpenvStorageEdgeVolumeDriver` on line 148
 
-Now restart the `nova-compute` services on all nova nodes: `systemctl restart nova-compute`
+Now restart the `nova-compute` services on all nova nodes: `systemctl restart nova-compute; systemctl status nova-compute`
 
 Checking if everything properly started: `ovs-support@dsa-aio-ctrl:~$ grep libovsvolumedriver.init /var/log/nova/nova-compute.log`
 ```
