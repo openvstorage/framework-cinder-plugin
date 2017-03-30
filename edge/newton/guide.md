@@ -56,7 +56,7 @@ https://github.com/openstack/nova/blob/master/nova/virt/libvirt/storage/lvm.py
 ### OpenStack ALL IN ONE - Virtual machine details
 * Hypervisor: 10.100.199.50
 * IP address: 10.100.198.200
-* Horizon: 10.100.198.200:80
+* Horizon: 10.100.198.200:80 (`admin` & `a57b83c66275ff805222573ca0592d50af9312643251814bb3`)
 * Amount CPU's: 12
 * Amount RAM: 32GB
 * Amount disk 210GB (On NVMe)
