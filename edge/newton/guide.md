@@ -66,7 +66,7 @@ https://github.com/openstack/nova/blob/master/nova/virt/libvirt/storage/lvm.py
     * `ovs-support/rooter`
     
 * Ready to go OpenStack `ocata` snapshot: `openstack`
-* Ready to go OpenStack `newton` snapshot: `openstack-newton` (and private key for user `root`)
+* Ready to go OpenStack `newton` snapshot: `openstack newton 2` (and private key for user `root`)
 ```
 -----BEGIN RSA PRIVATE KEY-----
 MIIEpgIBAAKCAQEAydfGmklPjf+CSfBnFmC9Pie2+FibbQ7ensyKLoEQW/4N1aJO
