@@ -404,7 +404,7 @@ class OpenvStorageEdgeVolumeDriver(driver.VolumeDriver):
         image_utils.upload_volume(context, image_service, image_meta, local_path)
 
         # remove local volume
-        self._remove_local_path(path=local_path)
+        # self._remove_local_path(path=local_path)
 
         LOG.debug('libovsvolumedriver.ovs_copy_volume_to_image {0} '.format(volume.id))
 
