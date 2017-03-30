@@ -2,6 +2,8 @@
 
 ## Description
 
+**THIS IS DEPRECATED ON NOT REQUIRED ANYMORE**
+
 The custom OS_BRICK connectors provide a connection between nova & cinder driver.
 
 **IMPORTANT:** These files must be patched on machines where `cinder-volume` & `nova-compute` are installed. Preferably under their own directories.

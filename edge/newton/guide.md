@@ -297,46 +297,6 @@ port = 443
 
 After adding this config to `/etc/cinder/cinder.conf` add the `openvstorage_edge.py` cinder driver to `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/cinder/volume/drivers/openvstorage_edge.py`
 
-### Patching the connector.py & adding a openvstorage connector
-
-**IMPORTANT:** You will have to patch these files on the NOVA & CINDER part.
-
-Base directory for the CINDER files: `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/os_brick/initiator/`
-Base directory for the NOVA files: `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/os_brick/initiator/`
-
-#### Connector.py
-
-This file is present in the following locations: 
-* `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/os_brick/initiator/connector.py`
-* `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/os_brick/initiator/connector.py`
-
-We have to edit the following lines:
-
-* line 85 
-`OPENVSTORAGE_EDGE = "OPENVSTORAGE_EDGE"`
-
-* line 93
-```
-connector_list = [
-        'os_brick.initiator.connectors.openvstorage.OpenvStorageEdgeConnector',
-        #...
-```
-
-* line 277
-```
-elif protocol == OPENVSTORAGE_EDGE:
-    return OpenvStorageEdgeConnector(root_helper=root_helper,
-                                     driver=driver,
-                                     device_scan_attempts=device_scan_attempts,
-                                     *args, **kwargs)
-```
-
-#### Connectors/openvstorage.py
-
-This file is present in the following locations: 
-* `/openstack/venvs/cinder-14.1.1/lib/python2.7/site-packages/os_brick/initiator/connectors/openvstorage.py`
-* `/openstack/venvs/nova-14.1.1/lib/python2.7/site-packages/os_brick/initiator/connectors/openvstorage.py`
-
 ### Installing Open vStorage components
 
 Remove all present `libvirt` & `qemu` packages:
